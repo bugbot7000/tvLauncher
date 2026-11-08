@@ -85,6 +85,7 @@ public class MainActivity extends FlutterActivity {
         super.configureFlutterEngine(flutterEngine);
 
         BinaryMessenger messenger = flutterEngine.getDartExecutor().getBinaryMessenger();
+        AmadiBridge.attach(this, messenger);
 
         new MethodChannel(messenger, METHOD_CHANNEL).setMethodCallHandler((call, result) -> {
             switch (call.method) {

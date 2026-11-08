@@ -42,6 +42,8 @@
 
     <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
     <uses-permission android:name="android.permission.WRITE_SETTINGS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
     <queries>
         <intent>
@@ -60,7 +62,7 @@
         android:banner="@drawable/banner"
         android:fullBackupContent="true"
         android:icon="@mipmap/ic_launcher"
-        android:label="Arc Launcher"
+        android:label="Amadi TV"
         android:requestLegacyExternalStorage="true">
         <!--
           Disable Impeller and fall back to the Skia renderer.
@@ -107,6 +109,16 @@
                 android:name="android.service.dream"
                 android:resource="@xml/screensaver" />
         </service>
+
+        <receiver
+            android:name=".AmadiBootReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+            </intent-filter>
+        </receiver>
 
         <meta-data
             android:name="flutterEmbedding"

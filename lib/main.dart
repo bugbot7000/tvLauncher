@@ -32,6 +32,9 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
+import 'amadi/amadi_settings.dart';
+import 'amadi/guest_service.dart';
+import 'amadi/weather_service.dart';
 import 'flauncher_app.dart';
 
 Future<void> main() async {
@@ -47,6 +50,12 @@ Future<void> main() async {
         ChangeNotifierProvider(
             create: (_) => SettingsService(sharedPreferences),
             lazy: false),
+        ChangeNotifierProvider(create: (_) => AmadiSettings(sharedPreferences), lazy: false),
+        ChangeNotifierProvider(
+            create: (context) => GuestService(Provider.of<AmadiSettings>(context, listen: false)),
+            lazy: false),
+        ChangeNotifierProvider(
+            create: (context) => WeatherService(Provider.of<AmadiSettings>(context, listen: false))),
         ChangeNotifierProvider(create: (_) => AppsService(fLauncherChannel, fLauncherDatabase)),
         ChangeNotifierProvider(create: (_) => LauncherState()),
         ChangeNotifierProvider(create: (_) => NetworkService(fLauncherChannel)),

@@ -26,7 +26,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 
-import 'flauncher.dart';
+import 'amadi/amadi_home.dart';
 
 class FLauncherApp extends StatelessWidget
 {
@@ -82,7 +82,7 @@ class FLauncherApp extends StatelessWidget
         GlobalWidgetsLocalizations.delegate
       ],
       supportedLocales: AppLocalizations.supportedLocales,
-      title: 'FLauncher',
+      title: 'Amadi TV',
         theme: ThemeData(
           useMaterial3: true,
           brightness: Brightness.dark,
@@ -142,18 +142,7 @@ class FLauncherApp extends StatelessWidget
             }),
           ), tabBarTheme: TabBarThemeData(indicatorColor: accentColor),
         ),
-      home: Builder(
-        builder: (context) => PopScope(
-          canPop: false,
-          child: ExcludeSemantics(
-            child: FLauncher(),
-          ),
-          onPopInvoked: (didPop) {
-            LauncherState launcherState = context.read<LauncherState>();
-            launcherState.handleBackNavigation(context);
-          }
-        )
-      ),
+      home: const ExcludeSemantics(child: AmadiHome()),
       );
     });
   }

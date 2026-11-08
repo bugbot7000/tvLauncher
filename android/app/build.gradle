@@ -64,7 +64,7 @@ android {
     }
 
     defaultConfig {
-        applicationId "com.omeda.arc"
+        applicationId "in.amadi.tvlauncher"
         compileSdk 36
         minSdkVersion flutter.minSdkVersion
         targetSdk 35
@@ -105,7 +105,10 @@ android {
             minifyEnabled true
             shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            signingConfig signingConfigs.release
+            // Amadi: fall back to the debug key when no release keystore is provided,
+            // so CI still produces an installable APK.
+            signingConfig (localProperties['storeFile'] != null || file('upload-keystore.jks').exists())
+                    ? signingConfigs.release : signingConfigs.debug
         }
     }
 
