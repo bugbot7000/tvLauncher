@@ -105,13 +105,10 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin, Wi
   }
 
   Future<void> _ensureWifi() async {
-    final settings = context.read<AmadiSettings>();
-    final network = context.read<NetworkService>();
-    await Future<void>.delayed(const Duration(seconds: 8));
-    if (!mounted) return;
-    if (!network.hasInternetAccess && settings.wifiSsid.isNotEmpty) {
-      await AmadiBridge.connectWifi(settings.wifiSsid, settings.wifiPassword);
-    }
+    final s = context.read<AmadiSettings>();
+    await Future<void>.delayed(const Duration(seconds: 5));
+    if (!mounted || s.wifiSsid.isEmpty) return;
+    await AmadiBridge.ensureWifi(s.wifiSsid, s.wifiPassword, s.fallbackSsid, s.fallbackPassword);
   }
 
   void _showWelcome() {

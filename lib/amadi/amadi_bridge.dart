@@ -70,6 +70,21 @@ class AmadiBridge {
     }
   }
 
+  /// Connects to the staff network, falling back to the guest network.
+  static Future<String> ensureWifi(String ssid, String password, String fallbackSsid, String fallbackPassword) async {
+    try {
+      return await _channel.invokeMethod<String>('ensureWifi', {
+            'ssid': ssid,
+            'password': password,
+            'fallbackSsid': fallbackSsid,
+            'fallbackPassword': fallbackPassword,
+          }) ??
+          'error';
+    } catch (e) {
+      return 'error:$e';
+    }
+  }
+
   static Future<String> connectWifi(String ssid, String password) async {
     try {
       return await _channel.invokeMethod<String>('connectWifi', {'ssid': ssid, 'password': password}) ?? 'error';

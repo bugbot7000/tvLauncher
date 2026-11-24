@@ -314,10 +314,18 @@ class _AmadiSettingsPageState extends State<AmadiSettingsPage> with WidgetsBindi
           _row('Default network', s.wifiSsid, () => _editText('Wi-Fi network name', s.wifiSsid, s.setWifiSsid)),
           _row('Default network password', s.wifiPassword.isEmpty ? 'None (open network)' : '••••••••',
               () => _editText('Wi-Fi password', s.wifiPassword, s.setWifiPassword, obscure: true)),
+          _row('Fallback network', s.fallbackSsid, () => _editText('Fallback Wi-Fi name', s.fallbackSsid, s.setFallbackSsid)),
+          _row('Fallback network password', s.fallbackPassword.isEmpty ? 'None (open network)' : '••••••••',
+              () => _editText('Fallback Wi-Fi password', s.fallbackPassword, s.setFallbackPassword, obscure: true)),
           _row('Connect to default network now', _wifiResult ?? '', () async {
-            final r = await AmadiBridge.connectWifi(s.wifiSsid, s.wifiPassword);
+            setState(() => _wifiResult = 'Connecting… (up to 30 seconds)');
+            final r = await AmadiBridge.ensureWifi(s.wifiSsid, s.wifiPassword, s.fallbackSsid, s.fallbackPassword);
             setState(() => _wifiResult = switch (r) {
                   'connected-request' => 'Connecting…',
+                  'already' => 'Connected to ${s.wifiSsid}',
+                  'staff' => 'Connected to ${s.wifiSsid}',
+                  'fallback' => 'Connected to ${s.fallbackSsid} (fallback)',
+                  'failed' => 'Could not connect. Check the network names and passwords.',
                   'suggested' => 'Sent to Android. Accept the prompt if one appears.',
                   'disabled' => 'Wi-Fi is off. Turn it on in Wi-Fi settings.',
                   'invalid' => 'Set a network name first.',

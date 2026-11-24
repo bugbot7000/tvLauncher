@@ -39,6 +39,17 @@ public final class AmadiBridge {
                     result.success(connectWifi(activity, ssid, password));
                     break;
                 }
+                case "ensureWifi": {
+                    final String ssid = call.argument("ssid");
+                    final String pass = call.argument("password");
+                    final String fbSsid = call.argument("fallbackSsid");
+                    final String fbPass = call.argument("fallbackPassword");
+                    new Thread(() -> {
+                        String r = ensureWifi(activity.getApplicationContext(), ssid, pass, fbSsid, fbPass);
+                        activity.runOnUiThread(() -> result.success(r));
+                    }).start();
+                    break;
+                }
                 case "wifiEnabled": {
                     WifiManager wm = (WifiManager) activity.getApplicationContext().getSystemService(Context.WIFI_SERVICE);
                     result.success(wm != null && wm.isWifiEnabled());
@@ -124,6 +135,40 @@ public final class AmadiBridge {
             activity.getApplicationContext().registerReceiver(screenReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
         } else {
             activity.getApplicationContext().registerReceiver(screenReceiver, filter);
+        }
+    }
+
+    /** SSID the TV is on now, read through the TV's own ADB (apps can't see it without location access). */
+    static String currentSsid(Context c) {
+        String out = AmadiSelfAdb.shell(c, "dumpsys wifi | grep mWifiInfo");
+        if (out == null) return "";
+        int i = out.indexOf("SSID: ");
+        if (i < 0) return "";
+        int j = out.indexOf(", BSSID", i);
+        String s = j > i ? out.substring(i + 6, j) : "";
+        return s.replace("\"", "").trim();
+    }
+
+    private static final Object WIFI_LOCK = new Object();
+
+    /** Joins the staff network; if that doesn't work within ~25 s, joins the fallback. */
+    static String ensureWifi(Context c, String ssid, String pass, String fbSsid, String fbPass) {
+        synchronized (WIFI_LOCK) {
+            if (ssid == null || ssid.isEmpty()) return "invalid";
+            if (ssid.equals(currentSsid(c))) return "already";
+            connectWifi(c, ssid, pass);
+            for (int k = 0; k < 10; k++) {
+                try { Thread.sleep(2500); } catch (InterruptedException ignored) {}
+                if (ssid.equals(currentSsid(c))) return "staff";
+            }
+            if (fbSsid == null || fbSsid.isEmpty()) return "failed";
+            if (fbSsid.equals(currentSsid(c))) return "fallback";
+            connectWifi(c, fbSsid, fbPass);
+            for (int k = 0; k < 8; k++) {
+                try { Thread.sleep(2500); } catch (InterruptedException ignored) {}
+                if (fbSsid.equals(currentSsid(c))) return "fallback";
+            }
+            return "failed";
         }
     }
 

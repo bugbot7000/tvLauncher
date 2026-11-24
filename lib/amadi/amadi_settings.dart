@@ -82,11 +82,16 @@ class AmadiSettings extends ChangeNotifier {
   String get restaurant => _s('restaurant', 'Dial 77');
   Future<void> setRestaurant(String v) => _set('restaurant', v.trim());
 
-  String get wifiSsid => _s('wifi_ssid', 'Amadi guest');
+  String get wifiSsid => _s('wifi_ssid', 'Amadi_Staff');
   Future<void> setWifiSsid(String v) => _set('wifi_ssid', v.trim());
 
-  String get wifiPassword => _s('wifi_password', '');
+  String get wifiPassword => _s('wifi_password', 'beach12345');
   Future<void> setWifiPassword(String v) => _set('wifi_password', v);
+
+  String get fallbackSsid => _s('fallback_ssid', 'Amadi_Guest');
+  Future<void> setFallbackSsid(String v) => _set('fallback_ssid', v.trim());
+  String get fallbackPassword => _s('fallback_password', 'beach1234');
+  Future<void> setFallbackPassword(String v) => _set('fallback_password', v);
 
   String get weatherPlace => _s('weather_place', 'Goa');
   Future<void> setWeatherPlace(String v) => _set('weather_place', v.trim());
