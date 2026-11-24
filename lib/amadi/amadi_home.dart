@@ -156,6 +156,7 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin, Wi
             _dismissWelcome();
             return KeyEventResult.handled;
           }
+          if (_handleDigit(event)) return KeyEventResult.handled;
           return KeyEventResult.ignored;
         },
         child: GestureDetector(
@@ -239,10 +240,10 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin, Wi
     final lines = <Widget>[];
     if (guest != null) {
       lines.add(Text('Dear ${guest.name},',
-          style: const TextStyle(color: _kText, fontSize: 30, fontWeight: FontWeight.w500, height: 1.15)));
-      lines.add(const Text('welcome to $_kResortName', style: TextStyle(color: _kMint, fontSize: 15)));
+          style: const TextStyle(color: Colors.white, fontSize: 38, fontWeight: FontWeight.w500, height: 1.15)));
+      lines.add(const Text('welcome to $_kResortName', style: TextStyle(color: Colors.white, fontSize: 16)));
       if (room.isNotEmpty) {
-        lines.add(Text('Room $room', style: const TextStyle(color: _kMint, fontSize: 12)));
+        lines.add(Text('Room $room', style: const TextStyle(color: Colors.white, fontSize: 13)));
       }
     } else {
       // Empty room: the big welcome only, nothing left in the corner afterwards.
@@ -371,10 +372,31 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin, Wi
   }
 
   Future<void> _openSettings() async {
-    final ok = await showPasscodeDialog(context);
-    if (!ok || !mounted) return;
     await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const AmadiSettingsPage()));
     if (mounted) _firstTileFocus.requestFocus();
+  }
+
+  /// Staff type the passcode on the remote's number keys while on the home screen.
+  String _typed = '';
+  DateTime _lastDigit = DateTime.fromMillisecondsSinceEpoch(0);
+
+  bool _handleDigit(KeyEvent event) {
+    if (event is! KeyDownEvent) return false;
+    final label = event.logicalKey.keyLabel;
+    final digit = label.length == 1 && '0123456789'.contains(label)
+        ? label
+        : (label.startsWith('Numpad ') && label.length == 8 ? label.substring(7) : null);
+    if (digit == null) return false;
+    final now = DateTime.now();
+    if (now.difference(_lastDigit) > const Duration(seconds: 4)) _typed = '';
+    _lastDigit = now;
+    _typed = (_typed + digit);
+    if (_typed.length > kSettingsPasscode.length) _typed = _typed.substring(_typed.length - kSettingsPasscode.length);
+    if (_typed == kSettingsPasscode) {
+      _typed = '';
+      _openSettings();
+    }
+    return true;
   }
 }
 
@@ -408,7 +430,7 @@ class _Dock extends StatefulWidget {
 class _DockState extends State<_Dock> {
   late final List<FocusNode> _nodes = [
     widget.firstFocus,
-    for (var i = 1; i <= kDockSlots.length; i++) FocusNode(debugLabel: 'amadi-dock-$i'),
+    for (var i = 1; i < kDockSlots.length; i++) FocusNode(debugLabel: 'amadi-dock-$i'),
   ];
 
   @override
@@ -438,7 +460,6 @@ class _DockState extends State<_Dock> {
   @override
   Widget build(BuildContext context) {
     final firstFocus = widget.firstFocus;
-    final onOpenSettings = widget.onOpenSettings;
     final apps = context.watch<AppsService>().applications;
     final settings = context.watch<AmadiSettings>();
     return Container(
@@ -459,20 +480,6 @@ class _DockState extends State<_Dock> {
                 ),
               ),
             ],
-            const SizedBox(width: 12),
-            SizedBox(
-              width: 76,
-              child: _FocusTile(
-                focusNode: _nodes[kDockSlots.length],
-                onArrow: (e) => _move(kDockSlots.length, e),
-                onActivate: onOpenSettings,
-                builder: (focused) => Container(
-                  height: 76,
-                  decoration: BoxDecoration(color: const Color(0xFFD3D1C7), borderRadius: BorderRadius.circular(12)),
-                  child: const Icon(Icons.settings_outlined, color: Color(0xFF2C2C2A), size: 30),
-                ),
-              ),
-            ),
           ],
         ),
       ),
