@@ -56,9 +56,25 @@ public final class AmadiBridge {
                 case "signOutNow":
                     new Thread(() -> {
                         AmadiDeviceOwner.signOutAll(activity);
-                        activity.runOnUiThread(() -> result.success(true));
+                        final boolean ok = AmadiDeviceOwner.isOwner(activity) || AmadiSelfAdb.lastOk();
+                        activity.runOnUiThread(() -> result.success(ok));
                     }).start();
                     break;
+                case "setDeviceName": {
+                    String raw = call.argument("name");
+                    final String name = raw == null ? "" : raw.replaceAll("[^A-Za-z0-9 ._-]", "").trim();
+                    if (name.isEmpty()) {
+                        result.success(false);
+                        break;
+                    }
+                    new Thread(() -> {
+                        String out = AmadiSelfAdb.shell(activity,
+                                "settings put global device_name '" + name + "'; settings put secure bluetooth_name '" + name + "'");
+                        final boolean ok = out != null;
+                        activity.runOnUiThread(() -> result.success(ok));
+                    }).start();
+                    break;
+                }
                 case "setSettingsHidden": {
                     Boolean hidden = call.argument("hidden");
                     final boolean h = hidden != null && hidden;

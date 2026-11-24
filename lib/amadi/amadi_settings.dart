@@ -4,6 +4,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'amadi_bridge.dart';
+
 /// Dock slots in display order. Each slot has a default name matcher used to
 /// find the app automatically; staff can override it in Hotel settings.
 class DockSlot {
@@ -35,7 +37,10 @@ class AmadiSettings extends ChangeNotifier {
   }
 
   String get roomNumber => _s('room', '');
-  Future<void> setRoomNumber(String v) => _set('room', v.trim());
+  Future<void> setRoomNumber(String v) async {
+    await _set('room', v.trim());
+    if (v.trim().isNotEmpty) await AmadiBridge.setDeviceName('${v.trim()} TV');
+  }
 
   String get sheetId => _s('sheet_id', kDefaultSheetId);
   Future<void> setSheetId(String v) => _set('sheet_id', v.trim());

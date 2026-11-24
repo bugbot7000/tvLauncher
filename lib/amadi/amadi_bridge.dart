@@ -24,10 +24,21 @@ class AmadiBridge {
     }
   }
 
-  static Future<void> signOutNow() async {
+  static Future<bool> signOutNow() async {
     try {
-      await _channel.invokeMethod('signOutNow');
-    } catch (_) {}
+      return await _channel.invokeMethod<bool>('signOutNow') ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Sets the TV's network/Bluetooth device name, e.g. "212 TV".
+  static Future<bool> setDeviceName(String name) async {
+    try {
+      return await _channel.invokeMethod<bool>('setDeviceName', {'name': name}) ?? false;
+    } catch (_) {
+      return false;
+    }
   }
 
   static Future<void> setSettingsHidden(bool hidden) async {

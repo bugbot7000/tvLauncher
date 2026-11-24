@@ -267,9 +267,27 @@ class _AmadiSettingsPageState extends State<AmadiSettingsPage> with WidgetsBindi
       body: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 8),
         children: [
+          _section('Guest checkout'),
+          ListTile(
+            autofocus: true,
+            leading: const Icon(Icons.logout),
+            title: const Text('Log guest out of all streaming apps'),
+            subtitle: Text('YouTube, Netflix, Prime Video and JioHotstar. Also runs daily at 11:30 AM. Last: ${_lastSignOut()}'),
+            focusColor: Colors.white24,
+            onTap: () async {
+              final ok = await AmadiBridge.signOutNow();
+              await _loadOwner();
+              if (!mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text(ok
+                    ? 'Signed out of all streaming apps'
+                    : 'Could not sign out. Check that network debugging is on and allowed for this app.'),
+              ));
+            },
+          ),
           _section('This TV'),
           _row('Room number', s.roomNumber.isEmpty ? 'Not set' : s.roomNumber,
-              () => _editText('Room number', s.roomNumber, s.setRoomNumber), autofocus: true),
+              () => _editText('Room number (also sets the TV name, e.g. 212 TV)', s.roomNumber, s.setRoomNumber)),
           _row(
             'Guest name',
             '${guests.guest?.display ?? 'No guest checked in'}  ·  ${guests.status}'
@@ -326,17 +344,7 @@ class _AmadiSettingsPageState extends State<AmadiSettingsPage> with WidgetsBindi
           _row('Make this the default home screen', '',
               () => _channel.launchActivityFromAction('android.settings.HOME_SETTINGS')),
           _row('Open Android settings', '', () => _openSystem(() => _channel.openSettings())),
-          _section('Guest privacy'),
-          _row(
-            'Sign out of streaming apps now',
-            _owner['owner'] == true
-                ? 'Happens automatically daily at 11:30 AM. Last: ${_lastSignOut()}'
-                : 'Needs device owner setup (not active on this TV)',
-            () async {
-              await AmadiBridge.signOutNow();
-              await _loadOwner();
-            },
-          ),
+          _section('Maintenance'),
           _row('Remove device owner (maintenance only)',
               'Turns off daily sign-out, home lock and settings hiding', () async {
             final ok = await showDialog<bool>(

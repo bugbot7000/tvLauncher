@@ -71,6 +71,8 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _intro.forward();
       _ensureWifi();
+      final room = context.read<AmadiSettings>().roomNumber;
+      if (room.isNotEmpty) AmadiBridge.setDeviceName('$room TV');
     });
   }
 
