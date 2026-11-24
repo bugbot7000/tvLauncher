@@ -30,6 +30,7 @@ public final class AmadiBridge {
     @SuppressLint({"UnspecifiedRegisterReceiverFlag", "WrongConstant"})
     public static void attach(Activity activity, BinaryMessenger messenger) {
         MethodChannel channel = new MethodChannel(messenger, CHANNEL);
+        new Thread(() -> AmadiDeviceOwner.onWake(activity.getApplicationContext())).start();
         channel.setMethodCallHandler((call, result) -> {
             switch (call.method) {
                 case "connectWifi": {
@@ -43,6 +44,26 @@ public final class AmadiBridge {
                     result.success(wm != null && wm.isWifiEnabled());
                     break;
                 }
+                case "ownerStatus": {
+                    java.util.HashMap<String, Object> m = new java.util.HashMap<>();
+                    m.put("owner", AmadiDeviceOwner.isOwner(activity));
+                    m.put("lastSignOut", AmadiDeviceOwner.lastSignOut(activity));
+                    result.success(m);
+                    break;
+                }
+                case "signOutNow":
+                    AmadiDeviceOwner.signOutAll(activity);
+                    result.success(true);
+                    break;
+                case "setSettingsHidden": {
+                    Boolean hidden = call.argument("hidden");
+                    try { AmadiDeviceOwner.setSettingsHidden(activity, hidden != null && hidden); } catch (Exception ignored) {}
+                    result.success(true);
+                    break;
+                }
+                case "removeOwner":
+                    result.success(AmadiDeviceOwner.removeOwner(activity));
+                    break;
                 default:
                     result.notImplemented();
             }
@@ -55,6 +76,7 @@ public final class AmadiBridge {
             @Override
             public void onReceive(Context context, Intent intent) {
                 if (Intent.ACTION_SCREEN_ON.equals(intent.getAction())) {
+                    AmadiDeviceOwner.onWake(context);
                     try { channel.invokeMethod("screenOn", null); } catch (Exception ignored) {}
                 }
             }

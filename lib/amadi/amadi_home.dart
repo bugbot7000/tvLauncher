@@ -361,6 +361,9 @@ App? resolveDockApp(DockSlot slot, List<App> apps, AmadiSettings settings) {
     }
   }
   for (final a in apps) {
+    if (a.packageName == slot.package) return a;
+  }
+  for (final a in apps) {
     final n = a.name.toLowerCase();
     if (slot.nameMatches.any(n.contains)) return a;
   }
@@ -444,7 +447,12 @@ class _AppTileState extends State<_AppTile> {
       focusNode: widget.focusNode,
       onActivate: () {
         if (app != null) {
-          appsService.launchApp(app);
+          Navigator.of(context).push(PageRouteBuilder<void>(
+            opaque: true,
+            transitionDuration: const Duration(milliseconds: 250),
+            pageBuilder: (_, __, ___) => _PrivacySplash(appName: widget.slot.label, onDone: () => appsService.launchApp(app)),
+            transitionsBuilder: (_, a, __, child) => FadeTransition(opacity: a, child: child),
+          ));
         } else {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text('${widget.slot.label} is not installed on this TV. Please contact the front desk.'),
@@ -522,6 +530,75 @@ class _FocusTileState extends State<_FocusTile> {
               border: Border.all(color: _focused ? Colors.white : Colors.transparent, width: 2.5),
             ),
             child: widget.builder(_focused),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+
+/// Shown for 6 seconds before a streaming app opens.
+class _PrivacySplash extends StatefulWidget {
+  final String appName;
+  final VoidCallback onDone;
+  const _PrivacySplash({required this.appName, required this.onDone});
+
+  @override
+  State<_PrivacySplash> createState() => _PrivacySplashState();
+}
+
+class _PrivacySplashState extends State<_PrivacySplash> {
+  Timer? _timer;
+  int _left = 6;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (!mounted) return;
+      if (_left <= 1) {
+        t.cancel();
+        widget.onDone();
+        Future<void>.delayed(const Duration(milliseconds: 800), () {
+          if (mounted) Navigator.of(context).pop();
+        });
+      } else {
+        setState(() => _left--);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Focus(
+      autofocus: true,
+      onKeyEvent: (_, __) => KeyEventResult.handled,
+      child: Scaffold(
+        backgroundColor: _kTeal,
+        body: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 560),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              const Icon(Icons.lock_outline, color: _kMint, size: 44),
+              const SizedBox(height: 18),
+              Text('Opening ${widget.appName}',
+                  style: const TextStyle(color: _kText, fontSize: 26, fontWeight: FontWeight.w500)),
+              const SizedBox(height: 12),
+              const Text(
+                'For your privacy, you will be signed out of streaming apps on this TV automatically every 24 hours.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: _kMint, fontSize: 16, height: 1.5),
+              ),
+              const SizedBox(height: 24),
+              Text('$_left', style: const TextStyle(color: _kText, fontSize: 18)),
+            ]),
           ),
         ),
       ),

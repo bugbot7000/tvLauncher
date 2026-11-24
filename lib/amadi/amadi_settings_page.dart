@@ -139,8 +139,44 @@ class AmadiSettingsPage extends StatefulWidget {
   State<AmadiSettingsPage> createState() => _AmadiSettingsPageState();
 }
 
-class _AmadiSettingsPageState extends State<AmadiSettingsPage> {
+class _AmadiSettingsPageState extends State<AmadiSettingsPage> with WidgetsBindingObserver {
   String? _wifiResult;
+  Map<String, dynamic> _owner = {};
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _loadOwner();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    AmadiBridge.setSettingsHidden(true);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Back from Android settings: hide it from guests again.
+    if (state == AppLifecycleState.resumed) {
+      AmadiBridge.setSettingsHidden(true);
+      _loadOwner();
+    }
+  }
+
+  Future<void> _loadOwner() async {
+    final m = await AmadiBridge.ownerStatus();
+    if (mounted) setState(() => _owner = m);
+  }
+
+  /// Unhides Android settings just long enough for staff to use it.
+  Future<void> _openSystem(Future<void> Function() open) async {
+    await AmadiBridge.setSettingsHidden(false);
+    await Future<void>.delayed(const Duration(milliseconds: 400));
+    await open();
+  }
 
   Future<void> _editText(String title, String current, Future<void> Function(String) save,
       {bool obscure = false, TextInputType keyboard = TextInputType.text}) async {
@@ -198,6 +234,12 @@ class _AmadiSettingsPageState extends State<AmadiSettingsPage> {
     await settings.setDockPackage(slot.id, picked.isEmpty ? null : picked);
   }
 
+  String _lastSignOut() {
+    final ms = _owner['lastSignOut'];
+    if (ms is! int || ms == 0) return 'not yet';
+    return DateFormat('d MMM, h:mm a').format(DateTime.fromMillisecondsSinceEpoch(ms));
+  }
+
   Widget _section(String title) => Padding(
         padding: const EdgeInsets.fromLTRB(16, 20, 16, 6),
         child: Text(title, style: const TextStyle(color: Color(0xFF9FE1CB), fontSize: 13)),
@@ -249,11 +291,11 @@ class _AmadiSettingsPageState extends State<AmadiSettingsPage> {
                   _ => r,
                 });
           }),
-          _row('Open Wi-Fi settings', '', () => _channel.openWifiSettings()),
+          _row('Open Wi-Fi settings', '', () => _openSystem(() => _channel.openWifiSettings())),
 
           _section('Date and time'),
           _row('Open date and time settings', 'Time is set automatically from the internet when available',
-              () => _channel.launchActivityFromAction('android.settings.DATE_SETTINGS')),
+              () => _openSystem(() => _channel.launchActivityFromAction('android.settings.DATE_SETTINGS'))),
 
           _section('Hotel information on screen'),
           _row('Breakfast', s.breakfast, () => _editText('Breakfast', s.breakfast, s.setBreakfast)),
@@ -281,7 +323,36 @@ class _AmadiSettingsPageState extends State<AmadiSettingsPage> {
           _row('Guest sheet ID', s.sheetId, () => _editText('Google Sheet ID', s.sheetId, s.setSheetId)),
           _row('Make this the default home screen', '',
               () => _channel.launchActivityFromAction('android.settings.HOME_SETTINGS')),
-          _row('Open Android settings', '', () => _channel.openSettings()),
+          _row('Open Android settings', '', () => _openSystem(() => _channel.openSettings())),
+          _section('Guest privacy'),
+          _row(
+            'Sign out of streaming apps now',
+            _owner['owner'] == true
+                ? 'Happens automatically daily at 11:30 AM. Last: ${_lastSignOut()}'
+                : 'Needs device owner setup (not active on this TV)',
+            () async {
+              await AmadiBridge.signOutNow();
+              await _loadOwner();
+            },
+          ),
+          _row('Remove device owner (maintenance only)',
+              'Turns off daily sign-out, home lock and settings hiding', () async {
+            final ok = await showDialog<bool>(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: const Text('Remove device owner?'),
+                content: const Text('Daily sign-out, the home screen lock and hiding of Android settings will stop until it is set up again over ADB.'),
+                actions: [
+                  TextButton(autofocus: true, onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancel')),
+                  TextButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text('Remove')),
+                ],
+              ),
+            );
+            if (ok == true) {
+              await AmadiBridge.removeOwner();
+              await _loadOwner();
+            }
+          }),
           const SizedBox(height: 24),
         ],
       ),

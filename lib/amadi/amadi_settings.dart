@@ -9,15 +9,16 @@ import 'package:shared_preferences/shared_preferences.dart';
 class DockSlot {
   final String id;
   final String label;
+  final String package;
   final List<String> nameMatches;
-  const DockSlot(this.id, this.label, this.nameMatches);
+  const DockSlot(this.id, this.label, this.package, this.nameMatches);
 }
 
 const List<DockSlot> kDockSlots = [
-  DockSlot('youtube', 'YouTube', ['youtube']),
-  DockSlot('netflix', 'Netflix', ['netflix']),
-  DockSlot('prime', 'Prime Video', ['prime video', 'primevideo', 'amazon video']),
-  DockSlot('hotstar', 'JioHotstar', ['hotstar']),
+  DockSlot('youtube', 'YouTube', 'com.google.android.youtube.tv', ['youtube']),
+  DockSlot('netflix', 'Netflix', 'com.netflix.ninja', ['netflix']),
+  DockSlot('prime', 'Prime Video', 'com.amazon.amazonvideo.livingroom', ['prime video', 'primevideo', 'amazon video']),
+  DockSlot('hotstar', 'JioHotstar', 'in.startv.hotstar', ['hotstar']),
 ];
 
 const String kSettingsPasscode = '2580';
