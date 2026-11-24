@@ -200,9 +200,9 @@ public final class AmadiBridge {
                     }
                 }
                 if (id == -1) return "error:add failed";
-                wm.disconnect();
+                // No disconnect()/reconnect(): reconnect() makes the TV re-pick its
+                // strongest saved network and abandon this attempt within 2 s.
                 wm.enableNetwork(id, true);
-                wm.reconnect();
                 return "connected-request";
             } else {
                 WifiNetworkSuggestion.Builder b = new WifiNetworkSuggestion.Builder().setSsid(ssid);
