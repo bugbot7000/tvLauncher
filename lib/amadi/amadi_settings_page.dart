@@ -135,7 +135,10 @@ class _PasscodeDialogState extends State<_PasscodeDialog> {
 }
 
 class AmadiSettingsPage extends StatefulWidget {
-  const AmadiSettingsPage({super.key});
+  const AmadiSettingsPage({super.key, this.onShowWelcome});
+
+  /// Plays the power-on welcome again (closes settings first).
+  final VoidCallback? onShowWelcome;
   @override
   State<AmadiSettingsPage> createState() => _AmadiSettingsPageState();
 }
@@ -300,6 +303,14 @@ class _AmadiSettingsPageState extends State<AmadiSettingsPage> with WidgetsBindi
             value: s.youtubeOnly,
             onChanged: (v) => s.setYoutubeOnly(v),
           ),
+          if (widget.onShowWelcome != null)
+            ListTile(
+              leading: const Icon(Icons.waving_hand_outlined),
+              title: const Text('Show welcome screen'),
+              subtitle: const Text('Plays the power-on greeting again'),
+              focusColor: Colors.white24,
+              onTap: widget.onShowWelcome,
+            ),
           _section('This TV'),
           _row('Room number', s.roomNumber.isEmpty ? 'Not set' : s.roomNumber,
               () => _editText('Room number (also sets the TV name, e.g. 212 TV)', s.roomNumber, s.setRoomNumber)),

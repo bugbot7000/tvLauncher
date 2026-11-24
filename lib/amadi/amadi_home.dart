@@ -265,7 +265,11 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin, Wi
     if (guest != null) {
       lines.add(Text('Dear ${guest.name},',
           style: TextStyle(fontFamily: _kSerif, color: Colors.white, fontSize: 30, fontWeight: FontWeight.w500, height: 1.15, shadows: shadows)));
-      lines.add(Text('Welcome to $_kResortName', style: TextStyle(color: Colors.white, fontSize: 14, shadows: shadows)));
+      // Half the name size, always one line (shrinks to fit rather than wrap or cut).
+      lines.add(FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text('Welcome to $_kResortName',
+              maxLines: 1, softWrap: false, style: TextStyle(color: Colors.white, fontSize: 15, shadows: shadows))));
       if (room.isNotEmpty && t > 0) {
         lines.add(Opacity(
             opacity: t,
@@ -349,7 +353,7 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin, Wi
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(DateFormat('h:mm a').format(_now),
-            style: const TextStyle(fontFamily: _kSerif, color: Colors.white, fontSize: 46, fontWeight: FontWeight.w500, height: 1, shadows: _kShadow)),
+            style: const TextStyle(fontFamily: 'Roboto', color: Colors.white, fontSize: 46, fontWeight: FontWeight.w500, height: 1, shadows: _kShadow)),
         const SizedBox(height: 6),
         Row(mainAxisSize: MainAxisSize.min, children: [
           Text(DateFormat('EEEE, d MMMM').format(_now), style: const TextStyle(color: Colors.white, fontSize: 14, shadows: _kShadow)),
@@ -407,7 +411,7 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin, Wi
   }
 
   Future<void> _openSettings() async {
-    await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const AmadiSettingsPage()));
+    await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => AmadiSettingsPage(onShowWelcome: _showWelcome)));
     if (mounted) _firstTileFocus.requestFocus();
   }
 
