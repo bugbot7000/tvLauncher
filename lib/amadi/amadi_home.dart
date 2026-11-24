@@ -345,10 +345,13 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin {
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
                 Text(items[i][0], style: const TextStyle(color: _kMint, fontSize: 15)),
                 const SizedBox(height: 2),
-                Text(items[i][1],
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: _kText, fontSize: 20, fontWeight: FontWeight.w500)),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(items[i][1],
+                      maxLines: 1,
+                      style: const TextStyle(color: _kText, fontSize: 20, fontWeight: FontWeight.w500)),
+                ),
               ]),
             ),
           ),
