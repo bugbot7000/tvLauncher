@@ -511,21 +511,28 @@ class _DockState extends State<_Dock> {
       ),
       child: FocusTraversalGroup(
         policy: ReadingOrderTraversalPolicy(),
-        child: Row(
-          children: [
-            for (var i = 0; i < slots.length; i++) ...[
-              if (i > 0) const SizedBox(width: 12),
-              Expanded(
-                child: _AppTile(
-                  slot: slots[i],
-                  app: resolveDockApp(slots[i], apps, settings),
-                  focusNode: _nodes[i],
-                  onArrow: (e) => _move(i, e),
+        // Tiles keep the four-app width; fewer apps sit centred.
+        child: LayoutBuilder(builder: (context, c) {
+          final n = kDockSlots.length;
+          final tileW = (c.maxWidth - 12 * (n - 1)) / n;
+          return Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              for (var i = 0; i < slots.length; i++) ...[
+                if (i > 0) const SizedBox(width: 12),
+                SizedBox(
+                  width: tileW,
+                  child: _AppTile(
+                    slot: slots[i],
+                    app: resolveDockApp(slots[i], apps, settings),
+                    focusNode: _nodes[i],
+                    onArrow: (e) => _move(i, e),
+                  ),
                 ),
-              ),
+              ],
             ],
-          ],
-        ),
+          );
+        }),
       ),
     );
   }
