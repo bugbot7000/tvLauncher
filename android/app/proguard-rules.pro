@@ -13,3 +13,6 @@
 -dontwarn org.bouncycastle.**
 -dontwarn org.conscrypt.**
 -dontwarn org.openjsse.**
+-dontwarn org.junit.**
+-dontwarn org.graalvm.**
+-dontwarn org.opentest4j.**

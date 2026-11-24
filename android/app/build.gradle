@@ -166,5 +166,6 @@ dependencies {
         exclude group: "junit"
         exclude group: "org.opentest4j"
         exclude group: "org.apiguardian"
+        exclude group: "org.graalvm.buildtools"
     }
 }

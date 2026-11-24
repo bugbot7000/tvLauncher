@@ -13,7 +13,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import 'package:video_player/video_player.dart';
 
 import 'amadi_bridge.dart';
 import 'amadi_settings.dart';
@@ -21,7 +20,16 @@ import 'amadi_settings_page.dart';
 import 'guest_service.dart';
 import 'weather_service.dart';
 
-const _kVideoAsset = 'assets/welcome.mp4';
+const _kWallpapers = [
+  'assets/wallpapers/Wall_1.jpg',
+  'assets/wallpapers/Wall_2.jpg',
+  'assets/wallpapers/Wall_3.jpg',
+  'assets/wallpapers/Wall_4.jpg',
+  'assets/wallpapers/Wall_5.jpg',
+  'assets/wallpapers/Wall_6.jpg',
+  'assets/wallpapers/Wall_7.jpg',
+];
+const _kWallpaperInterval = Duration(seconds: 60);
 const _kTeal = Color(0xFF04342C);
 const _kMint = Color(0xFF9FE1CB);
 const _kText = Color(0xFFF1EFE8);
@@ -37,8 +45,8 @@ class AmadiHome extends StatefulWidget {
 class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin {
   late final AnimationController _reveal; // 0 = welcome, 1 = home
   late final AnimationController _intro; // welcome text entrance
-  VideoPlayerController? _video;
-  bool _videoFailed = false;
+  int _wallIndex = 0;
+  Timer? _wallTimer;
   bool _welcome = true;
   final FocusNode _rootFocus = FocusNode(debugLabel: 'amadi-root');
   final FocusNode _firstTileFocus = FocusNode(debugLabel: 'amadi-dock-0');
@@ -50,7 +58,12 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin {
     super.initState();
     _reveal = AnimationController(vsync: this, duration: const Duration(milliseconds: 900));
     _intro = AnimationController(vsync: this, duration: const Duration(milliseconds: 1100));
-    _initVideo();
+    _wallTimer = Timer.periodic(_kWallpaperInterval, (_) {
+      if (!mounted) return;
+      final next = (_wallIndex + 1) % _kWallpapers.length;
+      precacheImage(AssetImage(_kWallpapers[(next + 1) % _kWallpapers.length]), context);
+      setState(() => _wallIndex = next);
+    });
     _clock = Timer.periodic(const Duration(seconds: 5), (_) {
       if (mounted) setState(() => _now = DateTime.now());
     });
@@ -59,24 +72,6 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin {
       _intro.forward();
       _ensureWifi();
     });
-  }
-
-  Future<void> _initVideo() async {
-    try {
-      final c = VideoPlayerController.asset(_kVideoAsset,
-          videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true));
-      await c.initialize();
-      await c.setLooping(true);
-      await c.setVolume(0);
-      await c.play();
-      if (!mounted) {
-        await c.dispose();
-        return;
-      }
-      setState(() => _video = c);
-    } catch (_) {
-      if (mounted) setState(() => _videoFailed = true);
-    }
   }
 
   Future<void> _ensureWifi() async {
@@ -98,7 +93,6 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin {
     _reveal.value = 0;
     _intro.forward(from: 0);
     _rootFocus.requestFocus();
-    _video?.play();
     _ensureWifi();
   }
 
@@ -116,7 +110,7 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin {
     _clock?.cancel();
     _reveal.dispose();
     _intro.dispose();
-    _video?.dispose();
+    _wallTimer?.cancel();
     _rootFocus.dispose();
     _firstTileFocus.dispose();
     super.dispose();
@@ -185,25 +179,18 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin {
   }
 
   Widget _background(double t) {
-    Widget child;
-    final v = _video;
-    if (v != null && v.value.isInitialized) {
-      child = FittedBox(
+    final Widget child = AnimatedSwitcher(
+      duration: const Duration(milliseconds: 1500),
+      child: Image.asset(
+        _kWallpapers[_wallIndex],
+        key: ValueKey<int>(_wallIndex),
         fit: BoxFit.cover,
-        clipBehavior: Clip.hardEdge,
-        child: SizedBox(width: v.value.size.width, height: v.value.size.height, child: VideoPlayer(v)),
-      );
-    } else {
-      child = Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFF0C447C), Color(0xFF854F0B), Color(0xFF412402)],
-          ),
-        ),
-      );
-    }
+        width: double.infinity,
+        height: double.infinity,
+        gaplessPlayback: true,
+        errorBuilder: (_, __, ___) => Container(color: _kTeal),
+      ),
+    );
     final sigma = 14.0 * (1 - t);
     if (sigma < 0.5) return child;
     return ClipRect(
