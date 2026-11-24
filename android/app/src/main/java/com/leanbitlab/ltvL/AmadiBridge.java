@@ -80,7 +80,8 @@ public final class AmadiBridge {
                     }
                     new Thread(() -> {
                         String out = AmadiSelfAdb.shell(activity,
-                                "settings put global device_name '" + name + "'; settings put secure bluetooth_name '" + name + "'");
+                                "settings put global device_name '" + name + "'; settings put secure bluetooth_name '" + name + "'; "
+                                        + hostnameCmd(name));
                         final boolean ok = out != null;
                         activity.runOnUiThread(() -> result.success(ok));
                     }).start();
@@ -147,6 +148,20 @@ public final class AmadiBridge {
         int j = out.indexOf(", BSSID", i);
         String s = j > i ? out.substring(i + 6, j) : "";
         return s.replace("\"", "").trim();
+    }
+
+    /** DHCP hostname the router (Omada) shows, e.g. "207-TV". Android 9 sends net.hostname if set. */
+    static String hostnameCmd(String name) {
+        String h = name.replaceAll("[^A-Za-z0-9-]+", "-").replaceAll("^-+|-+$", "");
+        return h.isEmpty() ? "true" : "setprop net.hostname " + h;
+    }
+
+    /** Re-applies the hostname after boot (setprop doesn't survive a restart). */
+    static void applyHostname(Context c) {
+        try {
+            String name = android.provider.Settings.Global.getString(c.getContentResolver(), "device_name");
+            if (name != null && !name.trim().isEmpty()) AmadiSelfAdb.shell(c, hostnameCmd(name.trim()));
+        } catch (Exception ignored) {}
     }
 
     private static final Object WIFI_LOCK = new Object();

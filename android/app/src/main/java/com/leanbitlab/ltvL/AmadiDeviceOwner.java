@@ -57,6 +57,7 @@ public final class AmadiDeviceOwner {
         // Sign-out now follows guest changes (handled in the launcher), so cancel
         // the old daily 11:30 alarm if one is still scheduled.
         try { cancelDailySignOut(c); } catch (Exception ignored) {}
+        AmadiBridge.applyHostname(c);
         if (!isOwner(c)) {
             try { setSettingsHidden(c, true); } catch (Exception ignored) {}
             return;
