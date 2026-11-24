@@ -43,7 +43,7 @@ class AmadiHome extends StatefulWidget {
   State<AmadiHome> createState() => _AmadiHomeState();
 }
 
-class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin {
+class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin, WidgetsBindingObserver {
   late final AnimationController _reveal; // 0 = welcome, 1 = home
   late final AnimationController _intro; // welcome text entrance
   int _wallIndex = 0;
@@ -57,6 +57,7 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _reveal = AnimationController(vsync: this, duration: const Duration(milliseconds: 1600));
     _intro = AnimationController(vsync: this, duration: const Duration(milliseconds: 1100));
     _wallTimer = Timer.periodic(_kWallpaperInterval, (_) async {
@@ -120,7 +121,16 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin {
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Back on the home screen (e.g. after closing an app): re-check the guest name.
+    if (state == AppLifecycleState.resumed && mounted) {
+      context.read<GuestService>().refresh();
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _clock?.cancel();
     _reveal.dispose();
     _intro.dispose();
