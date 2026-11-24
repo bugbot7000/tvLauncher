@@ -36,7 +36,11 @@ const _kTeal = Color(0xFF04342C);
 const _kMint = Color(0xFF9FE1CB);
 const _kText = Color(0xFFF1EFE8);
 const _kResortName = 'Amadi Beach Front Resort';
-const _kShadow = [Shadow(color: Color(0x99000000), blurRadius: 6, offset: Offset(0, 1.5))];
+const _kShadow = [
+  Shadow(color: Color(0xB3000000), blurRadius: 12, offset: Offset(0, 2)),
+  Shadow(color: Color(0x80000000), blurRadius: 3, offset: Offset(0, 1)),
+];
+const _kSerif = 'Playfair Display';
 
 class AmadiHome extends StatefulWidget {
   const AmadiHome({super.key});
@@ -179,7 +183,9 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin, Wi
           onTap: _welcome ? _dismissWelcome : null,
           child: Scaffold(
             backgroundColor: Colors.black,
-            body: AnimatedBuilder(
+            body: DefaultTextStyle.merge(
+              style: const TextStyle(fontFamily: 'Roboto'),
+              child: AnimatedBuilder(
               animation: Listenable.merge([_reveal, _intro, _wallFade]),
               builder: (context, _) {
                 final t = Curves.easeInOutCubic.transform(_reveal.value);
@@ -189,6 +195,7 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin, Wi
                     _background(t),
                     // Darken slightly so text stays readable on bright frames.
                     Container(color: _kTeal.withOpacity(0.18 + 0.2 * (1 - t))),
+                    if (t > 0) IgnorePointer(child: Opacity(opacity: t, child: const _Scrims())),
                     IgnorePointer(
                       ignoring: _welcome,
                       child: Opacity(
@@ -214,6 +221,7 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin, Wi
                   ],
                 );
               },
+            ),
             ),
           ),
         ),
@@ -259,7 +267,7 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin, Wi
     final lines = <Widget>[];
     if (guest != null) {
       lines.add(Text('Dear ${guest.name},',
-          style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w500, height: 1.15, shadows: shadows)));
+          style: TextStyle(fontFamily: _kSerif, color: Colors.white, fontSize: 30, fontWeight: FontWeight.w500, height: 1.15, shadows: shadows)));
       lines.add(Text('Welcome to $_kResortName', style: TextStyle(color: Colors.white, fontSize: 14, shadows: shadows)));
       if (room.isNotEmpty && t > 0) {
         lines.add(Opacity(
@@ -271,7 +279,7 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin, Wi
         lines.add(Opacity(
           opacity: 1 - t,
           child: const Text('Welcome to $_kResortName',
-              style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w500)),
+              style: TextStyle(fontFamily: _kSerif, color: Colors.white, fontSize: 24, fontWeight: FontWeight.w500)),
         ));
       }
       // Empty room: the corner still shows which room this is.
@@ -344,7 +352,7 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin, Wi
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(DateFormat('h:mm a').format(_now),
-            style: const TextStyle(color: Colors.white, fontSize: 44, fontWeight: FontWeight.w500, height: 1, shadows: _kShadow)),
+            style: const TextStyle(fontFamily: _kSerif, color: Colors.white, fontSize: 46, fontWeight: FontWeight.w500, height: 1, shadows: _kShadow)),
         const SizedBox(height: 6),
         Row(mainAxisSize: MainAxisSize.min, children: [
           Text(DateFormat('EEEE, d MMMM').format(_now), style: const TextStyle(color: Colors.white, fontSize: 14, shadows: _kShadow)),
@@ -819,5 +827,49 @@ class _TickerState extends State<_Ticker> with SingleTickerProviderStateMixin {
           ]),
       ]),
     );
+  }
+}
+
+
+/// Soft dark gradients at the top and bottom so white text stays readable on
+/// bright wallpapers.
+class _Scrims extends StatelessWidget {
+  const _Scrims();
+  @override
+  Widget build(BuildContext context) {
+    return const Stack(fit: StackFit.expand, children: [
+      Align(
+        alignment: Alignment.topCenter,
+        child: FractionallySizedBox(
+          heightFactor: 0.38,
+          widthFactor: 1,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Color(0x73000000), Color(0x00000000)],
+              ),
+            ),
+          ),
+        ),
+      ),
+      Align(
+        alignment: Alignment.bottomCenter,
+        child: FractionallySizedBox(
+          heightFactor: 0.45,
+          widthFactor: 1,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.bottomCenter,
+                end: Alignment.topCenter,
+                colors: [Color(0x66000000), Color(0x00000000)],
+              ),
+            ),
+          ),
+        ),
+      ),
+    ]);
   }
 }
