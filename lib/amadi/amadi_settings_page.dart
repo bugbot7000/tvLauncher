@@ -298,7 +298,6 @@ class _AmadiSettingsPageState extends State<AmadiSettingsPage> with WidgetsBindi
             title: const Text('Show only YouTube'),
             subtitle: const Text('Hides Netflix, Prime Video and JioHotstar. Turns off by itself when the guest changes.'),
             value: s.youtubeOnly,
-            focusColor: Colors.white24,
             onChanged: (v) => s.setYoutubeOnly(v),
           ),
           _section('This TV'),
