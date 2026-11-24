@@ -53,6 +53,8 @@ jobs:
           mkdir -p out
           cp build/app/outputs/flutter-apk/arc-launcher-universal-release.apk out/amadi-tv-${GITHUB_RUN_NUMBER}.apk 2>/dev/null \
             || find build/app/outputs -name 'arc-launcher-universal-*release.apk' -exec cp {} out/amadi-tv-${GITHUB_RUN_NUMBER}.apk \;
+          # 32-bit ARM build for the room TVs (much smaller than the universal APK)
+          find build/app/outputs -name 'arc-launcher-armeabi-v7a-*release.apk' -exec cp {} out/amadi-tv-${GITHUB_RUN_NUMBER}-armv7.apk \;
           ls -la out build/app/outputs/flutter-apk || true
           test -f out/amadi-tv-${GITHUB_RUN_NUMBER}.apk
 
