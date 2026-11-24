@@ -8,6 +8,7 @@ import 'package:flauncher/providers/apps_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 
 import 'amadi_bridge.dart';
@@ -166,9 +167,17 @@ class _AmadiSettingsPageState extends State<AmadiSettingsPage> with WidgetsBindi
     }
   }
 
+  String _version = '';
+
   Future<void> _loadOwner() async {
     final m = await AmadiBridge.ownerStatus();
     if (mounted) setState(() => _owner = m);
+    if (_version.isEmpty) {
+      try {
+        final info = await PackageInfo.fromPlatform();
+        if (mounted) setState(() => _version = '${info.version} (build ${info.buildNumber})');
+      } catch (_) {}
+    }
   }
 
   /// Unhides Android settings just long enough for staff to use it.
@@ -363,6 +372,13 @@ class _AmadiSettingsPageState extends State<AmadiSettingsPage> with WidgetsBindi
               await _loadOwner();
             }
           }),
+          _section('About'),
+          ListTile(
+            title: const Text('Amadi TV launcher version'),
+            subtitle: Text(_version.isEmpty ? '…' : _version),
+            focusColor: Colors.white24,
+            onTap: () {},
+          ),
           const SizedBox(height: 24),
         ],
       ),
