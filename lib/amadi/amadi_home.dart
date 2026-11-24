@@ -248,11 +248,18 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin {
             child: Transform.scale(
               scale: scale,
               alignment: align,
-              child: IntrinsicWidth(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [for (final l in lines) Align(alignment: lineAlign, child: l)],
+              child: ConstrainedBox(
+                // Keep the big centred welcome inside the screen at any scale.
+                constraints: BoxConstraints(maxWidth: (MediaQuery.of(context).size.width - 120) / scale),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: IntrinsicWidth(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [for (final l in lines) Align(alignment: lineAlign, child: l)],
+                    ),
+                  ),
                 ),
               ),
             ),
