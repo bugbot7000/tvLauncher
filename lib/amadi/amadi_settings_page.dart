@@ -321,6 +321,8 @@ class _AmadiSettingsPageState extends State<AmadiSettingsPage> with WidgetsBindi
 
           _section('System'),
           _row('Guest sheet ID', s.sheetId, () => _editText('Google Sheet ID', s.sheetId, s.setSheetId)),
+          _row('Guest data link (optional)', s.guestUrl.isEmpty ? 'Not set, reading the sheet directly' : s.guestUrl,
+              () => _editText('Guest data link', s.guestUrl, s.setGuestUrl)),
           _row('Make this the default home screen', '',
               () => _channel.launchActivityFromAction('android.settings.HOME_SETTINGS')),
           _row('Open Android settings', '', () => _openSystem(() => _channel.openSettings())),

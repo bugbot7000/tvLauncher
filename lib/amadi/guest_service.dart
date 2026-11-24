@@ -45,7 +45,11 @@ class GuestService extends ChangeNotifier {
       return;
     }
     try {
-      final uri = Uri.https('docs.google.com', '/spreadsheets/d/${settings.sheetId}/gviz/tq', {'tqx': 'out:csv'});
+      final custom = settings.guestUrl;
+      final uri = custom.isNotEmpty
+          ? Uri.parse(custom)
+          : Uri.https('docs.google.com', '/spreadsheets/d/${settings.sheetId}/gviz/tq',
+              {'tqx': 'out:csv', 'sheet': 'Rooms', 'range': 'A2:W'});
       final res = await http.get(uri).timeout(const Duration(seconds: 15));
       if (res.statusCode != 200 || res.body.trimLeft().startsWith('<')) {
         _setGuest(_guest, 'Sheet not readable (is it shared by link?)');
@@ -66,36 +70,43 @@ class GuestService extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Finds the guest for [room]. Handles a plain table (Room, Name[, Check-in, Check-out])
+  /// and the front office Rooms grid, which repeats Room/First Name blocks side by side.
   @visibleForTesting
   static Guest? pickGuest(List<List<String>> rows, String room, DateTime now, String checkoutTime) {
     if (rows.isEmpty) return null;
-    final header = rows.first.map((h) => h.toLowerCase()).toList();
-    int col(String key, int fallback) {
-      final i = header.indexWhere((h) => h.contains(key));
-      return i >= 0 ? i : fallback;
+    final want = room.trim().toLowerCase();
+    final header = rows.first.map((h) => h.trim().toLowerCase()).toList();
+    final roomCols = <int>[];
+    for (var i = 0; i < header.length; i++) {
+      if (header[i] == 'room' || header[i] == 'room number' || header[i] == 'room no') roomCols.add(i);
     }
-
-    final cRoom = col('room', 0), cTitle = col('title', 1), cName = col('name', 2);
-    final cIn = col('check-in', 3) , cOut = col('check-out', 4);
+    if (roomCols.isEmpty) roomCols.add(0);
+    final cIn = header.indexWhere((h) => h.contains('check-in') || h.contains('checkin'));
+    final cOut = header.indexWhere((h) => h.contains('check-out') || h.contains('checkout'));
     final outParts = checkoutTime.split(':');
     final outH = int.tryParse(outParts.first) ?? 11;
     final outM = outParts.length > 1 ? int.tryParse(outParts[1]) ?? 0 : 0;
 
-    Guest? found;
     for (final r in rows.skip(1)) {
-      String at(int i) => i < r.length ? r[i].trim() : '';
-      if (at(cRoom).toLowerCase() != room.toLowerCase()) continue;
-      final name = at(cName);
-      if (name.isEmpty) continue;
-      final dIn = parseDate(at(cIn));
-      final dOut = parseDate(at(cOut));
-      if (dIn == null || dOut == null) continue;
-      final end = DateTime(dOut.year, dOut.month, dOut.day, outH, outM);
-      if (!now.isBefore(dIn) && now.isBefore(end)) {
-        found = Guest(at(cTitle), name);
+      String at(int i) => i >= 0 && i < r.length ? r[i].trim() : '';
+      for (final rc in roomCols) {
+        var roomVal = at(rc).toLowerCase();
+        if (roomVal.endsWith('.0')) roomVal = roomVal.substring(0, roomVal.length - 2);
+        if (roomVal != want) continue;
+        final name = at(rc + 1);
+        if (name.isEmpty) continue;
+        if (cIn >= 0 && cOut >= 0 && roomCols.length == 1) {
+          final dIn = parseDate(at(cIn));
+          final dOut = parseDate(at(cOut));
+          if (dIn == null || dOut == null) continue;
+          final end = DateTime(dOut.year, dOut.month, dOut.day, outH, outM);
+          if (now.isBefore(dIn) || !now.isBefore(end)) continue;
+        }
+        return Guest('', name);
       }
     }
-    return found;
+    return null;
   }
 
   /// Accepts dd/mm/yyyy, dd-mm-yyyy, dd.mm.yyyy and yyyy-mm-dd.

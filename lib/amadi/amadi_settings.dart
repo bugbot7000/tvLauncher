@@ -22,7 +22,7 @@ const List<DockSlot> kDockSlots = [
 ];
 
 const String kSettingsPasscode = '2580';
-const String kDefaultSheetId = '1owBxD52wqZcpDqo1UchYtyCCnpOSLhk83m0YTGY1W6Y';
+const String kDefaultSheetId = '1907vOmNeuiRroHDYzcmXfz-iiv_MSmO4xDxoeSG57Q8';
 
 class AmadiSettings extends ChangeNotifier {
   final SharedPreferences _prefs;
@@ -39,6 +39,11 @@ class AmadiSettings extends ChangeNotifier {
 
   String get sheetId => _s('sheet_id', kDefaultSheetId);
   Future<void> setSheetId(String v) => _set('sheet_id', v.trim());
+
+  /// Optional web address that returns guest data as CSV (e.g. the front office
+  /// sheet's Apps Script). When empty the sheet is read directly by its ID.
+  String get guestUrl => _s('guest_url', '');
+  Future<void> setGuestUrl(String v) => _set('guest_url', v.trim());
 
   String get checkoutTime => _s('checkout_time', '11:00');
   Future<void> setCheckoutTime(String v) => _set('checkout_time', v.trim());
