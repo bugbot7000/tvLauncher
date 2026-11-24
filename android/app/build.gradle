@@ -107,8 +107,8 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             // Amadi: fall back to the debug key when no release keystore is provided,
             // so CI still produces an installable APK.
-            signingConfig (localProperties['storeFile'] != null || file('upload-keystore.jks').exists())
-                    ? signingConfigs.release : signingConfigs.debug
+            def hasReleaseKey = localProperties['storeFile'] != null || file('upload-keystore.jks').exists()
+            signingConfig = hasReleaseKey ? signingConfigs.release : signingConfigs.debug
         }
     }
 
