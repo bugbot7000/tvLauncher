@@ -48,17 +48,24 @@ public final class AmadiBridge {
                     java.util.HashMap<String, Object> m = new java.util.HashMap<>();
                     m.put("owner", AmadiDeviceOwner.isOwner(activity));
                     m.put("lastSignOut", AmadiDeviceOwner.lastSignOut(activity));
+                    m.put("adbOk", AmadiSelfAdb.lastOk());
+                    m.put("adbError", AmadiSelfAdb.lastError());
                     result.success(m);
                     break;
                 }
                 case "signOutNow":
-                    AmadiDeviceOwner.signOutAll(activity);
-                    result.success(true);
+                    new Thread(() -> {
+                        AmadiDeviceOwner.signOutAll(activity);
+                        activity.runOnUiThread(() -> result.success(true));
+                    }).start();
                     break;
                 case "setSettingsHidden": {
                     Boolean hidden = call.argument("hidden");
-                    try { AmadiDeviceOwner.setSettingsHidden(activity, hidden != null && hidden); } catch (Exception ignored) {}
-                    result.success(true);
+                    final boolean h = hidden != null && hidden;
+                    new Thread(() -> {
+                        try { AmadiDeviceOwner.setSettingsHidden(activity, h); } catch (Exception ignored) {}
+                        activity.runOnUiThread(() -> result.success(true));
+                    }).start();
                     break;
                 }
                 case "removeOwner":
@@ -76,7 +83,8 @@ public final class AmadiBridge {
             @Override
             public void onReceive(Context context, Intent intent) {
                 if (Intent.ACTION_SCREEN_ON.equals(intent.getAction())) {
-                    AmadiDeviceOwner.onWake(context);
+                    final Context app = context.getApplicationContext();
+                    new Thread(() -> AmadiDeviceOwner.onWake(app)).start();
                     try { channel.invokeMethod("screenOn", null); } catch (Exception ignored) {}
                 }
             }

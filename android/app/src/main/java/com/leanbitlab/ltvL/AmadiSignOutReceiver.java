@@ -11,7 +11,15 @@ import android.content.Intent;
 public class AmadiSignOutReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
-        AmadiDeviceOwner.signOutAll(context);
-        AmadiDeviceOwner.scheduleDailySignOut(context);
+        final PendingResult pending = goAsync();
+        final Context app = context.getApplicationContext();
+        new Thread(() -> {
+            try {
+                AmadiDeviceOwner.signOutAll(app);
+                AmadiDeviceOwner.scheduleDailySignOut(app);
+            } finally {
+                pending.finish();
+            }
+        }).start();
     }
 }

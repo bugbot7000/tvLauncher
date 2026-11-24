@@ -27,6 +27,7 @@ public final class AmadiDeviceOwner {
     public static final String[] STREAMING_APPS = {
             "com.google.android.youtube.tv",
             "com.netflix.ninja",
+            "com.netflix.mediaclient",
             "com.amazon.amazonvideo.livingroom",
             "in.startv.hotstar",
     };
@@ -53,7 +54,12 @@ public final class AmadiDeviceOwner {
 
     /** Runs at launcher start, boot and screen-on. Safe to call often. */
     public static void onWake(Context c) {
-        if (!isOwner(c)) return;
+        if (!isOwner(c)) {
+            try { setSettingsHidden(c, true); } catch (Exception ignored) {}
+            try { signOutIfOverdue(c); } catch (Exception ignored) {}
+            try { scheduleDailySignOut(c); } catch (Exception ignored) {}
+            return;
+        }
         try { grantSelf(c); } catch (Exception ignored) {}
         try { lockHome(c); } catch (Exception ignored) {}
         try { setSettingsHidden(c, true); } catch (Exception ignored) {}
@@ -79,8 +85,11 @@ public final class AmadiDeviceOwner {
     }
 
     public static void setSettingsHidden(Context c, boolean hidden) {
-        if (!isOwner(c)) return;
-        dpm(c).setApplicationHidden(admin(c), TV_SETTINGS, hidden);
+        if (isOwner(c)) {
+            dpm(c).setApplicationHidden(admin(c), TV_SETTINGS, hidden);
+        } else {
+            AmadiSelfAdb.shell(c, hidden ? "pm disable-user --user 0 " + TV_SETTINGS : "pm enable " + TV_SETTINGS);
+        }
     }
 
     /** Forgets every saved network except the staff network and connects to it. */
@@ -109,7 +118,17 @@ public final class AmadiDeviceOwner {
 
     @SuppressLint("NewApi")
     public static void signOutAll(Context c) {
-        if (!isOwner(c) || Build.VERSION.SDK_INT < 28) return;
+        if (!isOwner(c)) {
+            StringBuilder cmd = new StringBuilder();
+            for (String p : STREAMING_APPS) {
+                if (cmd.length() > 0) cmd.append("; ");
+                cmd.append("pm clear ").append(p);
+            }
+            String out = AmadiSelfAdb.shell(c, cmd.toString());
+            if (out != null) prefs(c).edit().putLong(KEY_LAST_SIGNOUT, System.currentTimeMillis()).apply();
+            return;
+        }
+        if (Build.VERSION.SDK_INT < 28) return;
         DevicePolicyManager d = dpm(c);
         for (String p : STREAMING_APPS) {
             try {

@@ -150,3 +150,8 @@ android {
 flutter {
     source '../..'
 }
+
+dependencies {
+    // Amadi: lets the launcher talk to the TV's own ADB (sign-out, hiding settings)
+    implementation "dev.mobile:dadb:1.2.7"
+}

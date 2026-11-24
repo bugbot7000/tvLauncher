@@ -7,3 +7,9 @@
 -keep class io.flutter.plugins.**  { *; }
 -dontwarn io.flutter.embedding.**
 -dontwarn com.google.android.play.core.splitcompat.SplitCompatApplication
+## Amadi self-ADB
+-keep class dadb.** { *; }
+-dontwarn dadb.**
+-dontwarn org.bouncycastle.**
+-dontwarn org.conscrypt.**
+-dontwarn org.openjsse.**

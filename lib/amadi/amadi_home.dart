@@ -222,9 +222,9 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin {
 
     final lines = <Widget>[];
     if (guest != null) {
-      lines.add(const Text('Welcome to $_kResortName', style: TextStyle(color: _kMint, fontSize: 14)));
-      lines.add(Text(guest.display,
+      lines.add(Text('Dear ${guest.name},',
           style: const TextStyle(color: _kText, fontSize: 30, fontWeight: FontWeight.w500, height: 1.15)));
+      lines.add(const Text('welcome to $_kResortName', style: TextStyle(color: _kMint, fontSize: 15)));
       if (room.isNotEmpty) {
         lines.add(Text('Room $room', style: const TextStyle(color: _kMint, fontSize: 12)));
       }
@@ -377,13 +377,49 @@ App? resolveDockApp(DockSlot slot, List<App> apps, AmadiSettings settings) {
   return null;
 }
 
-class _Dock extends StatelessWidget {
+class _Dock extends StatefulWidget {
   final FocusNode firstFocus;
   final VoidCallback onOpenSettings;
   const _Dock({required this.firstFocus, required this.onOpenSettings});
 
   @override
+  State<_Dock> createState() => _DockState();
+}
+
+class _DockState extends State<_Dock> {
+  late final List<FocusNode> _nodes = [
+    widget.firstFocus,
+    for (var i = 1; i <= kDockSlots.length; i++) FocusNode(debugLabel: 'amadi-dock-$i'),
+  ];
+
+  @override
+  void dispose() {
+    for (final n in _nodes.skip(1)) {
+      n.dispose();
+    }
+    super.dispose();
+  }
+
+  KeyEventResult _move(int index, KeyEvent event) {
+    if (event is! KeyDownEvent && event is! KeyRepeatEvent) return KeyEventResult.ignored;
+    if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+      if (index < _nodes.length - 1) _nodes[index + 1].requestFocus();
+      return KeyEventResult.handled;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+      if (index > 0) _nodes[index - 1].requestFocus();
+      return KeyEventResult.handled;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.arrowUp || event.logicalKey == LogicalKeyboardKey.arrowDown) {
+      return KeyEventResult.handled; // nothing else on screen takes focus
+    }
+    return KeyEventResult.ignored;
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final firstFocus = widget.firstFocus;
+    final onOpenSettings = widget.onOpenSettings;
     final apps = context.watch<AppsService>().applications;
     final settings = context.watch<AmadiSettings>();
     return Container(
@@ -399,7 +435,8 @@ class _Dock extends StatelessWidget {
                 child: _AppTile(
                   slot: kDockSlots[i],
                   app: resolveDockApp(kDockSlots[i], apps, settings),
-                  focusNode: i == 0 ? firstFocus : null,
+                  focusNode: _nodes[i],
+                  onArrow: (e) => _move(i, e),
                 ),
               ),
             ],
@@ -407,6 +444,8 @@ class _Dock extends StatelessWidget {
             SizedBox(
               width: 76,
               child: _FocusTile(
+                focusNode: _nodes[kDockSlots.length],
+                onArrow: (e) => _move(kDockSlots.length, e),
                 onActivate: onOpenSettings,
                 builder: (focused) => Container(
                   height: 76,
@@ -426,7 +465,8 @@ class _AppTile extends StatefulWidget {
   final DockSlot slot;
   final App? app;
   final FocusNode? focusNode;
-  const _AppTile({required this.slot, required this.app, this.focusNode});
+  final KeyEventResult Function(KeyEvent)? onArrow;
+  const _AppTile({required this.slot, required this.app, this.focusNode, this.onArrow});
 
   @override
   State<_AppTile> createState() => _AppTileState();
@@ -436,9 +476,15 @@ class _AppTileState extends State<_AppTile> {
   Future<Uint8List>? _image;
   String? _imagePkg;
 
+  bool _isBanner = true;
+
   Future<Uint8List> _loadImage(AppsService apps, String pkg) async {
     final banner = await apps.getAppBanner(pkg);
-    if (banner.isNotEmpty) return banner;
+    if (banner.isNotEmpty) {
+      _isBanner = true;
+      return banner;
+    }
+    _isBanner = false;
     return apps.getAppIcon(pkg);
   }
 
@@ -452,6 +498,7 @@ class _AppTileState extends State<_AppTile> {
     }
     return _FocusTile(
       focusNode: widget.focusNode,
+      onArrow: widget.onArrow,
       onActivate: () {
         if (app != null) {
           Navigator.of(context).push(PageRouteBuilder<void>(
@@ -486,7 +533,13 @@ class _AppTileState extends State<_AppTile> {
                         child: Text(widget.slot.label,
                             style: const TextStyle(color: Color(0xFF2C2C2A), fontSize: 14)));
                   }
-                  return Image.memory(bytes, fit: BoxFit.cover, gaplessPlayback: true);
+                  if (_isBanner) return Image.memory(bytes, fit: BoxFit.cover, gaplessPlayback: true);
+                  // Phone apps only have a square icon: show it centred on black.
+                  return Container(
+                    color: Colors.black,
+                    padding: const EdgeInsets.all(10),
+                    child: Image.memory(bytes, fit: BoxFit.contain, gaplessPlayback: true),
+                  );
                 },
               ),
       ),
@@ -498,8 +551,9 @@ class _AppTileState extends State<_AppTile> {
 class _FocusTile extends StatefulWidget {
   final FocusNode? focusNode;
   final VoidCallback onActivate;
+  final KeyEventResult Function(KeyEvent)? onArrow;
   final Widget Function(bool focused) builder;
-  const _FocusTile({this.focusNode, required this.onActivate, required this.builder});
+  const _FocusTile({this.focusNode, required this.onActivate, this.onArrow, required this.builder});
 
   @override
   State<_FocusTile> createState() => _FocusTileState();
@@ -522,7 +576,7 @@ class _FocusTileState extends State<_FocusTile> {
           widget.onActivate();
           return KeyEventResult.handled;
         }
-        return KeyEventResult.ignored;
+        return widget.onArrow?.call(event) ?? KeyEventResult.ignored;
       },
       child: GestureDetector(
         onTap: widget.onActivate,

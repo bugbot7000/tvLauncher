@@ -15,7 +15,8 @@ public class AmadiBootReceiver extends BroadcastReceiver {
         if (Intent.ACTION_BOOT_COMPLETED.equals(action)
                 || "android.intent.action.QUICKBOOT_POWERON".equals(action)
                 || Intent.ACTION_LOCKED_BOOT_COMPLETED.equals(action)) {
-            AmadiDeviceOwner.onWake(context);
+            final Context app = context.getApplicationContext();
+            new Thread(() -> AmadiDeviceOwner.onWake(app)).start();
             try {
                 Intent launch = new Intent(context, MainActivity.class);
                 launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
