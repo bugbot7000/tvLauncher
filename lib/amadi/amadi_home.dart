@@ -47,6 +47,8 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin, Wi
   late final AnimationController _reveal; // 0 = welcome, 1 = home
   late final AnimationController _intro; // welcome text entrance
   int _wallIndex = 0;
+  int _prevWallIndex = 0;
+  late final AnimationController _wallFade;
   Timer? _wallTimer;
   bool _welcome = true;
   final FocusNode _rootFocus = FocusNode(debugLabel: 'amadi-root');
@@ -58,15 +60,21 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin, Wi
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _reveal = AnimationController(vsync: this, duration: const Duration(milliseconds: 1600));
-    _intro = AnimationController(vsync: this, duration: const Duration(milliseconds: 1100));
+    _reveal = AnimationController(vsync: this, animationBehavior: AnimationBehavior.preserve, duration: const Duration(milliseconds: 1600));
+    _intro = AnimationController(vsync: this, animationBehavior: AnimationBehavior.preserve, duration: const Duration(milliseconds: 1100));
+    _wallFade = AnimationController(vsync: this, animationBehavior: AnimationBehavior.preserve, duration: const Duration(milliseconds: 2000), value: 1);
     _wallTimer = Timer.periodic(_kWallpaperInterval, (_) async {
       if (!mounted) return;
       final next = (_wallIndex + 1) % _kWallpapers.length;
       await precacheImage(AssetImage(_kWallpapers[next]), context);
       if (!mounted) return;
       await precacheImage(AssetImage(_blurOf(_kWallpapers[next])), context);
-      if (mounted) setState(() => _wallIndex = next);
+      if (!mounted) return;
+      setState(() {
+        _prevWallIndex = _wallIndex;
+        _wallIndex = next;
+      });
+      _wallFade.forward(from: 0);
     });
     _clock = Timer.periodic(const Duration(seconds: 5), (_) {
       if (mounted) setState(() => _now = DateTime.now());
@@ -134,6 +142,7 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin, Wi
     _clock?.cancel();
     _reveal.dispose();
     _intro.dispose();
+    _wallFade.dispose();
     _wallTimer?.cancel();
     _rootFocus.dispose();
     _firstTileFocus.dispose();
@@ -165,7 +174,7 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin, Wi
           child: Scaffold(
             backgroundColor: Colors.black,
             body: AnimatedBuilder(
-              animation: Listenable.merge([_reveal, _intro]),
+              animation: Listenable.merge([_reveal, _intro, _wallFade]),
               builder: (context, _) {
                 final t = Curves.easeInOutCubic.transform(_reveal.value);
                 return Stack(
@@ -204,7 +213,6 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin, Wi
   }
 
   Widget _background(double t) {
-    final path = _kWallpapers[_wallIndex];
     Widget img(String p) => Image.asset(
           p,
           fit: BoxFit.cover,
@@ -213,22 +221,20 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin, Wi
           gaplessPlayback: true,
           errorBuilder: (_, __, ___) => Container(color: _kTeal),
         );
-    // Pre-blurred copies are faded instead of blurring live, which the TV's GPU
-    // cannot do smoothly.
-    return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 2000),
-      switchInCurve: Curves.easeInOut,
-      switchOutCurve: Curves.easeInOut,
-      layoutBuilder: (current, previous) => Stack(fit: StackFit.expand, children: [...previous, if (current != null) current]),
-      child: Stack(
-        key: ValueKey<int>(_wallIndex),
-        fit: StackFit.expand,
-        children: [
-          img(path),
-          if (t < 1) Opacity(opacity: (1 - t).clamp(0.0, 1.0), child: img(_blurOf(path))),
-        ],
-      ),
-    );
+    // Pre-blurred copies are faded instead of blurring live (the TV GPU is too slow).
+    Widget layer(int i) {
+      final path = _kWallpapers[i];
+      return Stack(fit: StackFit.expand, children: [
+        img(path),
+        if (t < 1) Opacity(opacity: (1 - t).clamp(0.0, 1.0), child: img(_blurOf(path))),
+      ]);
+    }
+
+    final f = Curves.easeInOut.transform(_wallFade.value);
+    return Stack(fit: StackFit.expand, children: [
+      if (f < 1) layer(_prevWallIndex),
+      Opacity(opacity: f, child: layer(_wallIndex)),
+    ]);
   }
 
   Widget _greeting(double t, Guest? guest, String room) {
@@ -637,7 +643,7 @@ class _PrivacySplash extends StatefulWidget {
 
 class _PrivacySplashState extends State<_PrivacySplash> with SingleTickerProviderStateMixin {
   late final AnimationController _progress =
-      AnimationController(vsync: this, duration: const Duration(seconds: 4))..forward();
+      AnimationController(vsync: this, animationBehavior: AnimationBehavior.preserve, duration: const Duration(seconds: 5))..forward();
 
   @override
   void initState() {
