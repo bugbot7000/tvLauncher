@@ -7,6 +7,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
+import 'amadi_bridge.dart';
 import 'amadi_settings.dart';
 
 class Guest {
@@ -63,8 +64,14 @@ class GuestService extends ChangeNotifier {
       final rows = parseCsv(res.body);
       _lastFetch = DateTime.now();
       final g = pickGuest(rows, room, DateTime.now(), settings.checkoutTime);
+      final previous = settings.cachedGuestRoom == room ? settings.cachedGuest : null;
       await settings.setCachedGuest(g?.name ?? '');
       await settings.setCachedGuestRoom(room);
+      // New guest or checkout: sign out of the streaming apps and show them all again.
+      if (previous != null && previous != (g?.name ?? '')) {
+        AmadiBridge.signOutNow();
+        if (settings.youtubeOnly) await settings.setYoutubeOnly(false);
+      }
       _setGuest(g, 'OK');
     } catch (e) {
       // Keep the previous guest when offline.

@@ -16,7 +16,6 @@ public class AmadiSignOutReceiver extends BroadcastReceiver {
         new Thread(() -> {
             try {
                 AmadiDeviceOwner.signOutAll(app);
-                AmadiDeviceOwner.scheduleDailySignOut(app);
             } finally {
                 pending.finish();
             }

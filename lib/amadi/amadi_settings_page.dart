@@ -281,7 +281,7 @@ class _AmadiSettingsPageState extends State<AmadiSettingsPage> with WidgetsBindi
             autofocus: true,
             leading: const Icon(Icons.logout),
             title: const Text('Log guest out of all streaming apps'),
-            subtitle: Text('YouTube, Netflix, Prime Video and JioHotstar. Also runs daily at 11:30 AM. Last: ${_lastSignOut()}'),
+            subtitle: Text('YouTube, Netflix, Prime Video and JioHotstar. Also happens automatically when the guest changes. Last: ${_lastSignOut()}'),
             focusColor: Colors.white24,
             onTap: () async {
               final ok = await AmadiBridge.signOutNow();
@@ -293,6 +293,13 @@ class _AmadiSettingsPageState extends State<AmadiSettingsPage> with WidgetsBindi
                     : 'Could not sign out. Check that network debugging is on and allowed for this app.'),
               ));
             },
+          ),
+          SwitchListTile(
+            title: const Text('Show only YouTube'),
+            subtitle: const Text('Hides Netflix, Prime Video and JioHotstar. Turns off by itself when the guest changes.'),
+            value: s.youtubeOnly,
+            focusColor: Colors.white24,
+            onChanged: (v) => s.setYoutubeOnly(v),
           ),
           _section('This TV'),
           _row('Room number', s.roomNumber.isEmpty ? 'Not set' : s.roomNumber,

@@ -500,6 +500,7 @@ class _DockState extends State<_Dock> {
     final firstFocus = widget.firstFocus;
     final apps = context.watch<AppsService>().applications;
     final settings = context.watch<AmadiSettings>();
+    final slots = settings.youtubeOnly ? kDockSlots.where((s) => s.id == 'youtube').toList() : kDockSlots;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -511,12 +512,12 @@ class _DockState extends State<_Dock> {
         policy: ReadingOrderTraversalPolicy(),
         child: Row(
           children: [
-            for (var i = 0; i < kDockSlots.length; i++) ...[
+            for (var i = 0; i < slots.length; i++) ...[
               if (i > 0) const SizedBox(width: 12),
               Expanded(
                 child: _AppTile(
-                  slot: kDockSlots[i],
-                  app: resolveDockApp(kDockSlots[i], apps, settings),
+                  slot: slots[i],
+                  app: resolveDockApp(slots[i], apps, settings),
                   focusNode: _nodes[i],
                   onArrow: (e) => _move(i, e),
                 ),
@@ -728,7 +729,7 @@ class _PrivacySplashState extends State<_PrivacySplash> with SingleTickerProvide
                   style: const TextStyle(color: _kText, fontSize: 28, fontWeight: FontWeight.w500)),
               const SizedBox(height: 14),
               const Text(
-                'Sign in with your own account to watch. For your privacy, you will be signed out of all streaming apps on this TV automatically every 24 hours.',
+                "Sign in with your own account to watch. For your privacy, you'll be signed out automatically after checkout.",
                 textAlign: TextAlign.center,
                 style: TextStyle(color: _kMint, fontSize: 17, height: 1.5),
               ),

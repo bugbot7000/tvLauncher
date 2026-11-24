@@ -54,18 +54,29 @@ public final class AmadiDeviceOwner {
 
     /** Runs at launcher start, boot and screen-on. Safe to call often. */
     public static void onWake(Context c) {
+        // Sign-out now follows guest changes (handled in the launcher), so cancel
+        // the old daily 11:30 alarm if one is still scheduled.
+        try { cancelDailySignOut(c); } catch (Exception ignored) {}
         if (!isOwner(c)) {
             try { setSettingsHidden(c, true); } catch (Exception ignored) {}
-            try { signOutIfOverdue(c); } catch (Exception ignored) {}
-            try { scheduleDailySignOut(c); } catch (Exception ignored) {}
             return;
         }
         try { grantSelf(c); } catch (Exception ignored) {}
         try { lockHome(c); } catch (Exception ignored) {}
         try { setSettingsHidden(c, true); } catch (Exception ignored) {}
         try { lockWifi(c); } catch (Exception ignored) {}
-        try { signOutIfOverdue(c); } catch (Exception ignored) {}
-        try { scheduleDailySignOut(c); } catch (Exception ignored) {}
+    }
+
+    static void cancelDailySignOut(Context c) {
+        AlarmManager am = (AlarmManager) c.getSystemService(Context.ALARM_SERVICE);
+        if (am == null) return;
+        Intent i = new Intent(c, AmadiSignOutReceiver.class);
+        PendingIntent pi = PendingIntent.getBroadcast(c, 1130, i,
+                PendingIntent.FLAG_NO_CREATE | (Build.VERSION.SDK_INT >= 23 ? PendingIntent.FLAG_IMMUTABLE : 0));
+        if (pi != null) {
+            am.cancel(pi);
+            pi.cancel();
+        }
     }
 
     static void grantSelf(Context c) {
