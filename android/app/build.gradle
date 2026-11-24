@@ -128,6 +128,12 @@ android {
         }
     }
 
+    packaging {
+        resources {
+            excludes += ["META-INF/LICENSE.md", "META-INF/LICENSE-notice.md", "META-INF/NOTICE.md"]
+        }
+    }
+
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
@@ -153,5 +159,12 @@ flutter {
 
 dependencies {
     // Amadi: lets the launcher talk to the TV's own ADB (sign-out, hiding settings)
-    implementation "dev.mobile:dadb:1.2.7"
+    implementation("dev.mobile:dadb:1.2.7") {
+        exclude group: "org.junit.jupiter"
+        exclude group: "org.junit.platform"
+        exclude group: "org.junit.vintage"
+        exclude group: "junit"
+        exclude group: "org.opentest4j"
+        exclude group: "org.apiguardian"
+    }
 }
