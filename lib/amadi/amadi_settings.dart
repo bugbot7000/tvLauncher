@@ -24,6 +24,8 @@ const List<DockSlot> kDockSlots = [
 ];
 
 const String kSettingsPasscode = '2580';
+const String kDefaultGuestUrl =
+    'https://script.google.com/macros/s/AKfycbwDiQi-qombK52wT1SsEUHcg_MLTn3O0540AVdUyKMLUo3myMhYRhOAbVhTBQSs6dAlwg/exec?tv=1';
 const String kDefaultSheetId = '1907vOmNeuiRroHDYzcmXfz-iiv_MSmO4xDxoeSG57Q8';
 
 class AmadiSettings extends ChangeNotifier {
@@ -47,7 +49,7 @@ class AmadiSettings extends ChangeNotifier {
 
   /// Optional web address that returns guest data as CSV (e.g. the front office
   /// sheet's Apps Script). When empty the sheet is read directly by its ID.
-  String get guestUrl => _s('guest_url', '');
+  String get guestUrl => _s('guest_url', kDefaultGuestUrl);
   Future<void> setGuestUrl(String v) => _set('guest_url', v.trim());
 
   String get checkoutTime => _s('checkout_time', '11:00');

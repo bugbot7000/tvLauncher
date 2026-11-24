@@ -30,6 +30,7 @@ const _kWallpapers = [
   'assets/wallpapers/Wall_7.jpg',
 ];
 const _kWallpaperInterval = Duration(seconds: 60);
+String _blurOf(String p) => p.replaceFirst('.jpg', '_blur.jpg');
 const _kTeal = Color(0xFF04342C);
 const _kMint = Color(0xFF9FE1CB);
 const _kText = Color(0xFFF1EFE8);
@@ -56,20 +57,30 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-    _reveal = AnimationController(vsync: this, duration: const Duration(milliseconds: 900));
+    _reveal = AnimationController(vsync: this, duration: const Duration(milliseconds: 1600));
     _intro = AnimationController(vsync: this, duration: const Duration(milliseconds: 1100));
-    _wallTimer = Timer.periodic(_kWallpaperInterval, (_) {
+    _wallTimer = Timer.periodic(_kWallpaperInterval, (_) async {
       if (!mounted) return;
       final next = (_wallIndex + 1) % _kWallpapers.length;
-      precacheImage(AssetImage(_kWallpapers[(next + 1) % _kWallpapers.length]), context);
-      setState(() => _wallIndex = next);
+      await precacheImage(AssetImage(_kWallpapers[next]), context);
+      if (!mounted) return;
+      await precacheImage(AssetImage(_blurOf(_kWallpapers[next])), context);
+      if (mounted) setState(() => _wallIndex = next);
     });
     _clock = Timer.periodic(const Duration(seconds: 5), (_) {
       if (mounted) setState(() => _now = DateTime.now());
     });
     AmadiBridge.onScreenOn(_showWelcome);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _intro.forward();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (await AmadiBridge.welcomeAlreadyShownThisBoot()) {
+        setState(() => _welcome = false);
+        _reveal.value = 1;
+        _intro.value = 1;
+        _firstTileFocus.requestFocus();
+      } else {
+        _intro.forward();
+      }
+      if (!mounted) return;
       _ensureWifi();
       final room = context.read<AmadiSettings>().roomNumber;
       if (room.isNotEmpty) AmadiBridge.setDeviceName('$room TV');
@@ -100,6 +111,7 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin {
 
   void _dismissWelcome() {
     if (!_welcome) return;
+    AmadiBridge.markWelcomeShown();
     setState(() => _welcome = false);
     _reveal.forward();
     Future<void>.delayed(const Duration(milliseconds: 400), () {
@@ -181,24 +193,29 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin {
   }
 
   Widget _background(double t) {
-    final Widget child = AnimatedSwitcher(
-      duration: const Duration(milliseconds: 1500),
-      child: Image.asset(
-        _kWallpapers[_wallIndex],
+    final path = _kWallpapers[_wallIndex];
+    Widget img(String p) => Image.asset(
+          p,
+          fit: BoxFit.cover,
+          width: double.infinity,
+          height: double.infinity,
+          gaplessPlayback: true,
+          errorBuilder: (_, __, ___) => Container(color: _kTeal),
+        );
+    // Pre-blurred copies are faded instead of blurring live, which the TV's GPU
+    // cannot do smoothly.
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 2000),
+      switchInCurve: Curves.easeInOut,
+      switchOutCurve: Curves.easeInOut,
+      layoutBuilder: (current, previous) => Stack(fit: StackFit.expand, children: [...previous, if (current != null) current]),
+      child: Stack(
         key: ValueKey<int>(_wallIndex),
-        fit: BoxFit.cover,
-        width: double.infinity,
-        height: double.infinity,
-        gaplessPlayback: true,
-        errorBuilder: (_, __, ___) => Container(color: _kTeal),
-      ),
-    );
-    final sigma = 14.0 * (1 - t);
-    if (sigma < 0.5) return child;
-    return ClipRect(
-      child: ImageFiltered(
-        imageFilter: ui.ImageFilter.blur(sigmaX: sigma, sigmaY: sigma, tileMode: ui.TileMode.clamp),
-        child: child,
+        fit: StackFit.expand,
+        children: [
+          img(path),
+          if (t < 1) Opacity(opacity: (1 - t).clamp(0.0, 1.0), child: img(_blurOf(path))),
+        ],
       ),
     );
   }
@@ -269,7 +286,7 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                ConstrainedBox(constraints: const BoxConstraints(maxWidth: 560), child: _infoStrip(settings)),
+                _infoStrip(settings),
                 const SizedBox(height: 18),
                 _Dock(firstFocus: _firstTileFocus, onOpenSettings: _openSettings),
               ],
@@ -320,18 +337,18 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin {
     return Row(
       children: [
         for (var i = 0; i < items.length; i++) ...[
-          if (i > 0) const SizedBox(width: 8),
+          if (i > 0) const SizedBox(width: 12),
           Expanded(
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
               decoration: BoxDecoration(color: _kTeal.withOpacity(0.72), borderRadius: BorderRadius.circular(10)),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-                Text(items[i][0], style: const TextStyle(color: _kMint, fontSize: 11)),
+                Text(items[i][0], style: const TextStyle(color: _kMint, fontSize: 15)),
                 const SizedBox(height: 2),
                 Text(items[i][1],
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: _kText, fontSize: 13, fontWeight: FontWeight.w500)),
+                    style: const TextStyle(color: _kText, fontSize: 20, fontWeight: FontWeight.w500)),
               ]),
             ),
           ),
@@ -598,30 +615,25 @@ class _PrivacySplash extends StatefulWidget {
   State<_PrivacySplash> createState() => _PrivacySplashState();
 }
 
-class _PrivacySplashState extends State<_PrivacySplash> {
-  Timer? _timer;
-  int _left = 6;
+class _PrivacySplashState extends State<_PrivacySplash> with SingleTickerProviderStateMixin {
+  late final AnimationController _progress =
+      AnimationController(vsync: this, duration: const Duration(seconds: 4))..forward();
 
   @override
   void initState() {
     super.initState();
-    _timer = Timer.periodic(const Duration(seconds: 1), (t) {
-      if (!mounted) return;
-      if (_left <= 1) {
-        t.cancel();
-        widget.onDone();
-        Future<void>.delayed(const Duration(milliseconds: 800), () {
-          if (mounted) Navigator.of(context).pop();
-        });
-      } else {
-        setState(() => _left--);
-      }
+    _progress.addStatusListener((status) {
+      if (status != AnimationStatus.completed || !mounted) return;
+      widget.onDone();
+      Future<void>.delayed(const Duration(milliseconds: 800), () {
+        if (mounted) Navigator.of(context).pop();
+      });
     });
   }
 
   @override
   void dispose() {
-    _timer?.cancel();
+    _progress.dispose();
     super.dispose();
   }
 
@@ -634,20 +646,30 @@ class _PrivacySplashState extends State<_PrivacySplash> {
         backgroundColor: _kTeal,
         body: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 560),
+            constraints: const BoxConstraints(maxWidth: 620),
             child: Column(mainAxisSize: MainAxisSize.min, children: [
-              const Icon(Icons.lock_outline, color: _kMint, size: 44),
-              const SizedBox(height: 18),
-              Text('Opening ${widget.appName}',
-                  style: const TextStyle(color: _kText, fontSize: 26, fontWeight: FontWeight.w500)),
-              const SizedBox(height: 12),
-              const Text(
-                'For your privacy, you will be signed out of streaming apps on this TV automatically every 24 hours.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: _kMint, fontSize: 16, height: 1.5),
+              SizedBox(
+                width: 64,
+                height: 64,
+                child: AnimatedBuilder(
+                  animation: _progress,
+                  builder: (_, __) => CircularProgressIndicator(
+                    value: _progress.value,
+                    strokeWidth: 5,
+                    color: _kMint,
+                    backgroundColor: Colors.white12,
+                  ),
+                ),
               ),
               const SizedBox(height: 24),
-              Text('$_left', style: const TextStyle(color: _kText, fontSize: 18)),
+              Text('Opening ${widget.appName}',
+                  style: const TextStyle(color: _kText, fontSize: 28, fontWeight: FontWeight.w500)),
+              const SizedBox(height: 14),
+              const Text(
+                'Sign in with your own account to watch. For your privacy, you will be signed out of all streaming apps on this TV automatically every 24 hours.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: _kMint, fontSize: 17, height: 1.5),
+              ),
             ]),
           ),
         ),

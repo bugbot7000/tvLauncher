@@ -84,6 +84,20 @@ public final class AmadiBridge {
                     }).start();
                     break;
                 }
+                case "welcomeShownThisBoot": {
+                    // The welcome shows once per power-on (and again on screen-on), not when
+                    // the launcher is reopened after an app.
+                    int boot = android.provider.Settings.Global.getInt(activity.getContentResolver(), "boot_count", -1);
+                    int shown = activity.getSharedPreferences("amadi_welcome", Context.MODE_PRIVATE).getInt("boot", -2);
+                    result.success(boot >= 0 && boot == shown);
+                    break;
+                }
+                case "markWelcomeShown": {
+                    int boot = android.provider.Settings.Global.getInt(activity.getContentResolver(), "boot_count", -1);
+                    activity.getSharedPreferences("amadi_welcome", Context.MODE_PRIVATE).edit().putInt("boot", boot).apply();
+                    result.success(true);
+                    break;
+                }
                 case "removeOwner":
                     result.success(AmadiDeviceOwner.removeOwner(activity));
                     break;

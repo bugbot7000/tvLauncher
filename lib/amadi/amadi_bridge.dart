@@ -47,6 +47,21 @@ class AmadiBridge {
     } catch (_) {}
   }
 
+  /// True when the welcome was already dismissed since the TV last booted.
+  static Future<bool> welcomeAlreadyShownThisBoot() async {
+    try {
+      return await _channel.invokeMethod<bool>('welcomeShownThisBoot') ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static Future<void> markWelcomeShown() async {
+    try {
+      await _channel.invokeMethod('markWelcomeShown');
+    } catch (_) {}
+  }
+
   static Future<bool> removeOwner() async {
     try {
       return await _channel.invokeMethod<bool>('removeOwner') ?? false;
