@@ -18,6 +18,7 @@ import 'amadi_bridge.dart';
 import 'amadi_settings.dart';
 import 'amadi_settings_page.dart';
 import 'guest_service.dart';
+import 'ticker_service.dart';
 import 'weather_service.dart';
 
 const _kWallpapers = [
@@ -35,6 +36,7 @@ const _kTeal = Color(0xFF04342C);
 const _kMint = Color(0xFF9FE1CB);
 const _kText = Color(0xFFF1EFE8);
 const _kResortName = 'Amadi Beach Front Resort';
+const _kShadow = [Shadow(color: Color(0x99000000), blurRadius: 6, offset: Offset(0, 1.5))];
 
 class AmadiHome extends StatefulWidget {
   const AmadiHome({super.key});
@@ -49,6 +51,7 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin, Wi
   int _wallIndex = 0;
   int _prevWallIndex = 0;
   late final AnimationController _wallFade;
+  late final AnimationController _pulse;
   Timer? _wallTimer;
   bool _welcome = true;
   final FocusNode _rootFocus = FocusNode(debugLabel: 'amadi-root');
@@ -62,6 +65,7 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin, Wi
     WidgetsBinding.instance.addObserver(this);
     _reveal = AnimationController(vsync: this, animationBehavior: AnimationBehavior.preserve, duration: const Duration(milliseconds: 1600));
     _intro = AnimationController(vsync: this, animationBehavior: AnimationBehavior.preserve, duration: const Duration(milliseconds: 1100));
+    _pulse = AnimationController(vsync: this, animationBehavior: AnimationBehavior.preserve, duration: const Duration(milliseconds: 1400))..repeat(reverse: true);
     _wallFade = AnimationController(vsync: this, animationBehavior: AnimationBehavior.preserve, duration: const Duration(milliseconds: 2000), value: 1);
     _wallTimer = Timer.periodic(_kWallpaperInterval, (_) async {
       if (!mounted) return;
@@ -133,6 +137,7 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin, Wi
     // Back on the home screen (e.g. after closing an app): re-check the guest name.
     if (state == AppLifecycleState.resumed && mounted) {
       context.read<GuestService>().refresh();
+      context.read<TickerService>().refresh();
     }
   }
 
@@ -143,6 +148,7 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin, Wi
     _reveal.dispose();
     _intro.dispose();
     _wallFade.dispose();
+    _pulse.dispose();
     _wallTimer?.cancel();
     _rootFocus.dispose();
     _firstTileFocus.dispose();
@@ -196,10 +202,13 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin, Wi
                         left: 0,
                         right: 0,
                         bottom: 32,
-                        child: Opacity(
-                          opacity: (_intro.value * 2 - 1).clamp(0.0, 1.0) * 0.7,
-                          child: const Text('Press any button to continue',
-                              textAlign: TextAlign.center, style: TextStyle(color: _kText, fontSize: 13)),
+                        child: AnimatedBuilder(
+                          animation: _pulse,
+                          builder: (_, __) => Opacity(
+                            opacity: (_intro.value * 2 - 1).clamp(0.0, 1.0) * (0.25 + 0.7 * _pulse.value),
+                            child: const Text('Press any button to continue',
+                                textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontSize: 15)),
+                          ),
                         ),
                       ),
                   ],
@@ -239,26 +248,41 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin, Wi
 
   Widget _greeting(double t, Guest? guest, String room) {
     final introT = Curves.easeOut.transform(_intro.value);
-    final scale = ui.lerpDouble(2.0, 1.0, t)!;
+    final scale = ui.lerpDouble(1.6, 1.0, t)!;
     final align = Alignment.lerp(Alignment.center, Alignment.topRight, t)!;
     final lineAlign = Alignment.lerp(Alignment.center, Alignment.centerRight, t)!;
+    // Shadows only on the home screen, not on the power-on greeting.
+    final shadows = t > 0.05
+        ? [for (final sh in _kShadow) Shadow(color: sh.color.withOpacity(sh.color.opacity * t), blurRadius: sh.blurRadius, offset: sh.offset)]
+        : const <Shadow>[];
 
     final lines = <Widget>[];
     if (guest != null) {
       lines.add(Text('Dear ${guest.name},',
-          style: const TextStyle(color: Colors.white, fontSize: 38, fontWeight: FontWeight.w500, height: 1.15)));
-      lines.add(const Text('welcome to $_kResortName', style: TextStyle(color: Colors.white, fontSize: 16)));
-      if (room.isNotEmpty) {
-        lines.add(Text('Room $room', style: const TextStyle(color: Colors.white, fontSize: 13)));
+          style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w500, height: 1.15, shadows: shadows)));
+      lines.add(Text('Welcome to $_kResortName', style: TextStyle(color: Colors.white, fontSize: 14, shadows: shadows)));
+      if (room.isNotEmpty && t > 0) {
+        lines.add(Opacity(
+            opacity: t,
+            child: Text('Room $room', style: TextStyle(color: Colors.white, fontSize: 13, shadows: shadows))));
       }
     } else {
-      // Empty room: the big welcome only, nothing left in the corner afterwards.
-      lines.add(Opacity(
-        opacity: 1 - t,
-        child: const Text('Welcome to $_kResortName',
-            style: TextStyle(color: _kText, fontSize: 24, fontWeight: FontWeight.w500)),
-      ));
+      if (t < 1) {
+        lines.add(Opacity(
+          opacity: 1 - t,
+          child: const Text('Welcome to $_kResortName',
+              style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w500)),
+        ));
+      }
+      // Empty room: the corner still shows which room this is.
+      if (room.isNotEmpty && t > 0) {
+        lines.add(Opacity(
+            opacity: t,
+            child: Text('Room $room',
+                style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w500, shadows: shadows))));
+      }
     }
+    if (lines.isEmpty) return const SizedBox.shrink();
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(48, 32, 48, 32),
@@ -303,7 +327,7 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin, Wi
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                _infoStrip(settings),
+                const _Ticker(),
                 const SizedBox(height: 18),
                 _Dock(firstFocus: _firstTileFocus, onOpenSettings: _openSettings),
               ],
@@ -320,24 +344,24 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin, Wi
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(DateFormat('h:mm a').format(_now),
-            style: const TextStyle(color: Colors.white, fontSize: 44, fontWeight: FontWeight.w500, height: 1)),
+            style: const TextStyle(color: Colors.white, fontSize: 44, fontWeight: FontWeight.w500, height: 1, shadows: _kShadow)),
         const SizedBox(height: 6),
         Row(mainAxisSize: MainAxisSize.min, children: [
-          Text(DateFormat('EEEE, d MMMM').format(_now), style: const TextStyle(color: Colors.white, fontSize: 14)),
+          Text(DateFormat('EEEE, d MMMM').format(_now), style: const TextStyle(color: Colors.white, fontSize: 14, shadows: _kShadow)),
           const SizedBox(width: 8),
           Icon(online ? Icons.wifi : Icons.wifi_off,
-              size: 16, color: Colors.white),
+              size: 16, color: Colors.white, shadows: _kShadow),
         ]),
         if (weather.tempC != null) ...[
           const SizedBox(height: 8),
           Row(mainAxisSize: MainAxisSize.min, children: [
-            Icon(weather.icon, size: 22, color: Colors.white),
+            Icon(weather.icon, size: 22, color: Colors.white, shadows: _kShadow),
             const SizedBox(width: 6),
             Text('${weather.tempC}°C',
-                style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w500)),
+                style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w500, shadows: _kShadow)),
             const SizedBox(width: 8),
             Text([weather.description, place].where((s) => s.isNotEmpty).join(' · '),
-                style: const TextStyle(color: Colors.white, fontSize: 12)),
+                style: const TextStyle(color: Colors.white, fontSize: 12, shadows: _kShadow)),
           ]),
         ],
       ],
@@ -470,7 +494,11 @@ class _DockState extends State<_Dock> {
     final settings = context.watch<AmadiSettings>();
     return Container(
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: const Color(0x2EF1EFE8), borderRadius: BorderRadius.circular(18)),
+      decoration: BoxDecoration(
+        color: const Color(0x40FFFFFF),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0x59FFFFFF), width: 1),
+      ),
       child: FocusTraversalGroup(
         policy: ReadingOrderTraversalPolicy(),
         child: Row(
@@ -700,6 +728,96 @@ class _PrivacySplashState extends State<_PrivacySplash> with SingleTickerProvide
           ),
         ),
       ),
+    );
+  }
+}
+
+
+/// One message at a time from the TV Tickr sheet, fading every 8 seconds.
+class _Ticker extends StatefulWidget {
+  const _Ticker();
+  @override
+  State<_Ticker> createState() => _TickerState();
+}
+
+class _TickerState extends State<_Ticker> with SingleTickerProviderStateMixin {
+  late final AnimationController _fade = AnimationController(
+      vsync: this, animationBehavior: AnimationBehavior.preserve, duration: const Duration(milliseconds: 700), value: 1);
+  Timer? _timer;
+  int _index = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(seconds: 8), (_) => _next());
+  }
+
+  Future<void> _next() async {
+    final n = context.read<TickerService>().messages.length;
+    if (n < 2 || !mounted) return;
+    await _fade.reverse();
+    if (!mounted) return;
+    setState(() => _index = (_index + 1) % n);
+    await _fade.forward();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _fade.dispose();
+    super.dispose();
+  }
+
+  static IconData _iconFor(String m) {
+    final t = m.toLowerCase();
+    if (t.contains('breakfast') || t.contains('lunch') || t.contains('dinner') || t.contains('restaurant menu')) {
+      return Icons.free_breakfast_outlined;
+    }
+    if (t.contains('housekeeping') || t.contains('clean')) return Icons.cleaning_services_outlined;
+    if (t.contains('checkout') || t.contains('check-out') || t.contains('check out')) return Icons.logout;
+    if (t.contains('dial') || t.contains('call') || t.contains('phone')) return Icons.phone_outlined;
+    if (t.contains('wifi') || t.contains('wi-fi')) return Icons.wifi;
+    if (t.contains('pool') || t.contains('beach')) return Icons.beach_access_outlined;
+    return Icons.info_outline;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final msgs = context.watch<TickerService>().messages;
+    if (msgs.isEmpty) return const SizedBox(height: 44);
+    final i = _index % msgs.length;
+    final msg = msgs[i];
+    return SizedBox(
+      height: 44,
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        FadeTransition(
+          opacity: _fade,
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Icon(_iconFor(msg), color: Colors.white, size: 22, shadows: _kShadow),
+            const SizedBox(width: 10),
+            Flexible(
+              child: Text(msg,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w500, shadows: _kShadow)),
+            ),
+          ]),
+        ),
+        const SizedBox(height: 6),
+        if (msgs.length > 1)
+          Row(mainAxisSize: MainAxisSize.min, children: [
+            for (var d = 0; d < msgs.length; d++)
+              Container(
+                width: 6,
+                height: 6,
+                margin: const EdgeInsets.symmetric(horizontal: 3),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: d == i ? Colors.white : Colors.white38,
+                ),
+              ),
+          ]),
+      ]),
     );
   }
 }

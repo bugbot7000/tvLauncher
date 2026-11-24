@@ -24,6 +24,11 @@ class GuestService extends ChangeNotifier {
   Timer? _timer;
 
   GuestService(this.settings) {
+    // Show the last known guest straight away (the TV may restart the launcher
+    // while an app is open).
+    if (settings.cachedGuest.isNotEmpty && settings.cachedGuestRoom == settings.roomNumber) {
+      _guest = Guest('', settings.cachedGuest);
+    }
     refresh();
     _timer = Timer.periodic(const Duration(minutes: 15), (_) => refresh());
   }
@@ -57,7 +62,10 @@ class GuestService extends ChangeNotifier {
       }
       final rows = parseCsv(res.body);
       _lastFetch = DateTime.now();
-      _setGuest(pickGuest(rows, room, DateTime.now(), settings.checkoutTime), 'OK');
+      final g = pickGuest(rows, room, DateTime.now(), settings.checkoutTime);
+      await settings.setCachedGuest(g?.name ?? '');
+      await settings.setCachedGuestRoom(room);
+      _setGuest(g, 'OK');
     } catch (e) {
       // Keep the previous guest when offline.
       _setGuest(_guest, 'Offline: $e');
@@ -103,10 +111,16 @@ class GuestService extends ChangeNotifier {
           final end = DateTime(dOut.year, dOut.month, dOut.day, outH, outM);
           if (now.isBefore(dIn) || !now.isBefore(end)) continue;
         }
-        return Guest('', name);
+        return Guest('', sentenceCase(name));
       }
     }
     return null;
+  }
+
+  /// "AMAN" / "aman" -> "Aman".
+  static String sentenceCase(String s) {
+    final t = s.trim().toLowerCase();
+    return t.isEmpty ? t : t[0].toUpperCase() + t.substring(1);
   }
 
   /// Accepts dd/mm/yyyy, dd-mm-yyyy, dd.mm.yyyy and yyyy-mm-dd.

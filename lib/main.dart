@@ -34,6 +34,7 @@ import 'package:intl/date_symbol_data_local.dart';
 
 import 'amadi/amadi_settings.dart';
 import 'amadi/guest_service.dart';
+import 'amadi/ticker_service.dart';
 import 'amadi/weather_service.dart';
 import 'flauncher_app.dart';
 
@@ -56,6 +57,8 @@ Future<void> main() async {
             lazy: false),
         ChangeNotifierProvider(
             create: (context) => WeatherService(Provider.of<AmadiSettings>(context, listen: false))),
+        ChangeNotifierProvider(
+            create: (context) => TickerService(Provider.of<AmadiSettings>(context, listen: false))),
         ChangeNotifierProvider(create: (_) => AppsService(fLauncherChannel, fLauncherDatabase)),
         ChangeNotifierProvider(create: (_) => LauncherState()),
         ChangeNotifierProvider(create: (_) => NetworkService(fLauncherChannel)),

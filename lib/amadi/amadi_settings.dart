@@ -52,6 +52,14 @@ class AmadiSettings extends ChangeNotifier {
   String get guestUrl => _s('guest_url', kDefaultGuestUrl);
   Future<void> setGuestUrl(String v) => _set('guest_url', v.trim());
 
+  /// Last guest name and ticker messages, shown instantly when the launcher restarts.
+  String get cachedGuest => _s('cached_guest', '');
+  Future<void> setCachedGuest(String v) async => _prefs.setString('amadi_cached_guest', v);
+  String get cachedGuestRoom => _s('cached_guest_room', '');
+  Future<void> setCachedGuestRoom(String v) async => _prefs.setString('amadi_cached_guest_room', v);
+  List<String> get cachedTicker => _prefs.getStringList('amadi_cached_ticker') ?? const [];
+  Future<void> setCachedTicker(List<String> v) async => _prefs.setStringList('amadi_cached_ticker', v);
+
   String get checkoutTime => _s('checkout_time', '11:00');
   Future<void> setCheckoutTime(String v) => _set('checkout_time', v.trim());
 
