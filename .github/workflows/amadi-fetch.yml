@@ -1,0 +1,42 @@
+name: Amadi setup downloader
+
+on:
+  push:
+    branches: [amadi]
+    paths: ["fetcher/**", ".github/workflows/amadi-fetch.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Build tiny APK with the SDK tools (no Gradle)
+        run: |
+          set -e
+          BT=$(ls -d $ANDROID_HOME/build-tools/* | sort -V | tail -1)
+          PLAT=$(ls -d $ANDROID_HOME/platforms/android-* | sort -V | tail -1)
+          echo "build-tools $BT, platform $PLAT"
+          cd fetcher
+          mkdir -p obj dex
+          javac --release 8 -cp $PLAT/android.jar -d obj $(find src -name '*.java')
+          $BT/d8 --min-api 21 --lib $PLAT/android.jar --output dex $(find obj -name '*.class')
+          $BT/aapt2 link -o unsigned.apk -I $PLAT/android.jar --manifest AndroidManifest.xml
+          (cd dex && zip -q ../unsigned.apk classes.dex)
+          $BT/zipalign -f 4 unsigned.apk aligned.apk
+          keytool -genkeypair -keystore k.jks -storepass android -keypass android -alias k \
+            -dname "CN=Amadi" -keyalg RSA -keysize 2048 -validity 10000 >/dev/null 2>&1
+          $BT/apksigner sign --ks k.jks --ks-pass pass:android --out amadi-fetch.apk aligned.apk
+          ls -la amadi-fetch.apk
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: amadi-fetch-${{ github.run_number }}
+          name: Amadi setup downloader ${{ github.run_number }}
+          files: fetcher/amadi-fetch.apk
