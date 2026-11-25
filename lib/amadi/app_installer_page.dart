@@ -5,7 +5,7 @@
  * missing or a different version. The list lives in a JSON file on Drive:
  *
  * {"apps": [{"package": "com.google.android.youtube.tv", "label": "YouTube",
- *            "version": "8.03.300",
+ *            "versionCode": 803300320,
  *            "files": [{"name": "base.apk", "id": "<drive file id>"}, ...]}]}
  *
  * Downloads resume after a Wi-Fi drop, so a weak connection is slow, not broken.
@@ -75,7 +75,7 @@ class _AppInstallerPageState extends State<AppInstallerPage> {
     }
     for (final a in (manifest['apps'] as List? ?? const [])) {
       final m = (a as Map).cast<String, dynamic>();
-      _jobs.add(_AppJob(m['package'] as String, (m['label'] ?? m['package']) as String, (m['version'] ?? '') as String,
+      _jobs.add(_AppJob(m['package'] as String, (m['label'] ?? m['package']) as String, '${m['versionCode'] ?? ''}',
           [for (final f in (m['files'] as List? ?? const [])) (f as Map).cast<String, dynamic>()]));
     }
     setState(() => _headline = 'Setting up apps');
@@ -83,7 +83,10 @@ class _AppInstallerPageState extends State<AppInstallerPage> {
     final base = (await getExternalStorageDirectory()) ?? await getApplicationSupportDirectory();
     for (final job in _jobs) {
       final have = await AmadiBridge.installedVersion(job.package);
-      if (have != null && (job.version.isEmpty || have == job.version)) {
+      // Skip when installed and the same or newer than the list's version.
+      final haveCode = int.tryParse(have ?? '');
+      final wantCode = int.tryParse(job.version);
+      if (have != null && (wantCode == null || (haveCode != null && haveCode >= wantCode))) {
         setState(() {
           job.status = 'Up to date';
           job.progress = 1;

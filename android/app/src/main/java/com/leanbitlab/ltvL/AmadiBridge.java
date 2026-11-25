@@ -105,10 +105,12 @@ public final class AmadiBridge {
                     break;
                 }
                 case "installedVersion": {
-                    // versionName of an installed app, or null.
+                    // versionCode of an installed app (as text), or null.
                     String pkg = call.argument("package");
                     try {
-                        result.success(activity.getPackageManager().getPackageInfo(pkg, 0).versionName);
+                        android.content.pm.PackageInfo pi = activity.getPackageManager().getPackageInfo(pkg, 0);
+                        long code = Build.VERSION.SDK_INT >= 28 ? pi.getLongVersionCode() : pi.versionCode;
+                        result.success(String.valueOf(code));
                     } catch (Exception e) {
                         result.success(null);
                     }

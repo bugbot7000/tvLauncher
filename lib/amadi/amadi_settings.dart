@@ -24,7 +24,7 @@ const List<DockSlot> kDockSlots = [
 ];
 
 /// Google Drive file ID of amadi-tv-apps.json, the list of apps the TV installs.
-const String kDefaultAppsManifestId = '';
+const String kDefaultAppsManifestId = '1dB21sV_ZEcecWgwYkmmAsIOyqGG-AeU_';
 
 const String kSettingsPasscode = '2580';
 const String kDefaultGuestUrl =

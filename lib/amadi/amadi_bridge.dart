@@ -102,7 +102,7 @@ class AmadiBridge {
     }
   }
 
-  /// versionName of an installed app, or null when it isn't installed.
+  /// versionCode of an installed app (as text), or null when it isn't installed.
   static Future<String?> installedVersion(String package) async {
     try {
       return await _channel.invokeMethod<String>('installedVersion', {'package': package});
