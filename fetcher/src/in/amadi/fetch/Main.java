@@ -47,8 +47,7 @@ public class Main extends Activity {
         dir.mkdirs();
         File out = new File(dir, name);
         File done = new File(dir, name + ".done");
-        done.delete();
-        out.delete();
+        done.delete(); // keep any partial file: a restarted download resumes it
         for (int attempt = 1; attempt <= 60; attempt++) {
             try {
                 if (download(url, out)) {
