@@ -284,7 +284,7 @@ class _AmadiSettingsPageState extends State<AmadiSettingsPage> with WidgetsBindi
             autofocus: true,
             leading: const Icon(Icons.logout),
             title: const Text('Log guest out of all streaming apps'),
-            subtitle: Text('YouTube, Netflix, Prime Video and JioHotstar. Also happens automatically when the guest changes. Last: ${_lastSignOut()}'),
+            subtitle: Text('YouTube, ZEE5, Prime Video and JioHotstar. Also happens automatically when the guest changes. Last: ${_lastSignOut()}'),
             focusColor: Colors.white24,
             onTap: () async {
               final ok = await AmadiBridge.signOutNow();
@@ -299,7 +299,7 @@ class _AmadiSettingsPageState extends State<AmadiSettingsPage> with WidgetsBindi
           ),
           SwitchListTile(
             title: const Text('Show only YouTube'),
-            subtitle: const Text('Hides Netflix, Prime Video and JioHotstar. Turns off by itself when the guest changes.'),
+            subtitle: const Text('Hides ZEE5, Prime Video and JioHotstar. Turns off by itself when the guest changes.'),
             value: s.youtubeOnly,
             onChanged: (v) => s.setYoutubeOnly(v),
           ),
@@ -311,19 +311,6 @@ class _AmadiSettingsPageState extends State<AmadiSettingsPage> with WidgetsBindi
               focusColor: Colors.white24,
               onTap: widget.onShowWelcome,
             ),
-          ListTile(
-            leading: const Icon(Icons.shop_outlined),
-            title: const Text('Open Aptoide app store'),
-            subtitle: const Text('Install or update apps. Pick which app each dock tile opens under Dock apps.'),
-            focusColor: Colors.white24,
-            onTap: () async {
-              final ok = await AmadiBridge.openPackage('cm.aptoidetv.pt');
-              if (!ok && mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Aptoide is not installed on this TV.')));
-              }
-            },
-          ),
           _section('This TV'),
           _row('Room number', s.roomNumber.isEmpty ? 'Not set' : s.roomNumber,
               () => _editText('Room number (also sets the TV name, e.g. 212 TV)', s.roomNumber, s.setRoomNumber)),

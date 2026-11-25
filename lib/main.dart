@@ -1,3 +1,4 @@
+import 'package:flauncher/amadi/dock_icon_cache.dart';
 /*
  * FLauncher
  * Copyright (C) 2021  Étienne Fesser
@@ -43,6 +44,7 @@ Future<void> main() async {
   initializeDateFormatting();
 
   final sharedPreferences = await SharedPreferences.getInstance();
+  await DockIconCache.preload(sharedPreferences, kDockSlots.map((s) => s.id));
   final fLauncherChannel = FLauncherChannel();
   final fLauncherDatabase = FLauncherDatabase(connect());
 

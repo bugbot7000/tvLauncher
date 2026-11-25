@@ -201,8 +201,7 @@ class AppsService extends ChangeNotifier
     _initialized = true;
     notifyListeners();
     
-    // Pre-cache icons for visible apps
-    _preCacheIcons();
+    // (No longer pre-loads every app's icon at start: on this TV that delayed the dock.)
   }
 
   Future<void> _preCacheIcons() async {

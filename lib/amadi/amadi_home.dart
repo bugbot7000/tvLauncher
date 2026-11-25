@@ -16,6 +16,7 @@ import 'package:provider/provider.dart';
 
 import 'amadi_bridge.dart';
 import 'amadi_settings.dart';
+import 'dock_icon_cache.dart';
 import 'amadi_settings_page.dart';
 import 'guest_service.dart';
 import 'ticker_service.dart';
@@ -87,7 +88,8 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin, Wi
       _wallFade.forward(from: 0);
     });
     _clock = Timer.periodic(const Duration(seconds: 5), (_) {
-      if (mounted) setState(() => _now = DateTime.now());
+      final n = DateTime.now();
+      if (mounted && n.minute != _now.minute) setState(() => _now = n);
     });
     AmadiBridge.onScreenOn(_showWelcome);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -560,29 +562,39 @@ class _AppTile extends StatefulWidget {
 }
 
 class _AppTileState extends State<_AppTile> {
-  Future<Uint8List>? _image;
-  String? _imagePkg;
+  String? _refreshedPkg;
 
-  bool _isBanner = true;
-
-  Future<Uint8List> _loadImage(AppsService apps, String pkg) async {
-    final banner = await apps.getAppBanner(pkg);
-    if (banner.isNotEmpty) {
-      _isBanner = true;
-      return banner;
-    }
-    _isBanner = false;
-    return apps.getAppIcon(pkg);
+  /// Shows cached artwork straight away; asks Android once per launcher start
+  /// for fresh artwork (picks up app updates) and saves it to disk.
+  void _refresh(AppsService apps, String pkg) {
+    if (_refreshedPkg == pkg) return;
+    _refreshedPkg = pkg;
+    () async {
+      try {
+        final banner = await apps.getAppBanner(pkg);
+        if (banner.isNotEmpty) {
+          await DockIconCache.store(pkg, banner, true);
+        } else {
+          final icon = await apps.getAppIcon(pkg);
+          if (icon.isNotEmpty) await DockIconCache.store(pkg, icon, false);
+        }
+      } catch (_) {}
+      if (mounted) setState(() {});
+    }();
   }
 
   @override
   Widget build(BuildContext context) {
     final app = widget.app;
     final appsService = context.read<AppsService>();
-    if (app != null && _imagePkg != app.packageName) {
-      _imagePkg = app.packageName;
-      _image = _loadImage(appsService, app.packageName);
+    final loading = !appsService.initialized;
+    // Before the app list has loaded, draw what this tile showed last time.
+    final pkg = app?.packageName ?? (loading ? DockIconCache.lastPackage[widget.slot.id] : null);
+    if (app != null) {
+      DockIconCache.rememberSlot(widget.slot.id, app.packageName);
+      _refresh(appsService, app.packageName);
     }
+    final cached = pkg == null ? null : DockIconCache.mem[pkg];
     return _FocusTile(
       focusNode: widget.focusNode,
       onArrow: widget.onArrow,
@@ -604,30 +616,21 @@ class _AppTileState extends State<_AppTile> {
         height: 76,
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(color: const Color(0xFFF1EFE8), borderRadius: BorderRadius.circular(12)),
-        child: app == null
-            ? Center(
-                child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  Text(widget.slot.label, style: const TextStyle(color: Color(0xFF2C2C2A), fontSize: 14)),
-                  const Text('Not installed', style: TextStyle(color: Color(0xFF888780), fontSize: 11)),
-                ]),
-              )
-            : FutureBuilder<Uint8List>(
-                future: _image,
-                builder: (context, snap) {
-                  final bytes = snap.data;
-                  if (bytes == null || bytes.isEmpty) {
-                    return Center(
-                        child: Text(widget.slot.label,
-                            style: const TextStyle(color: Color(0xFF2C2C2A), fontSize: 14)));
-                  }
-                  if (_isBanner) return Image.memory(bytes, fit: BoxFit.cover, gaplessPlayback: true);
-                  // Phone apps only have a square icon: show it centred on black.
-                  return Container(
+        child: cached != null
+            ? (cached.$2
+                ? Image.memory(cached.$1, fit: BoxFit.cover, gaplessPlayback: true)
+                // Phone apps only have a square icon: show it centred on black.
+                : Container(
                     color: Colors.black,
                     padding: const EdgeInsets.all(10),
-                    child: Image.memory(bytes, fit: BoxFit.contain, gaplessPlayback: true),
-                  );
-                },
+                    child: Image.memory(cached.$1, fit: BoxFit.contain, gaplessPlayback: true),
+                  ))
+            : Center(
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  Text(widget.slot.label, style: const TextStyle(color: Color(0xFF2C2C2A), fontSize: 14)),
+                  if (app == null && !loading)
+                    const Text('Not installed', style: TextStyle(color: Color(0xFF888780), fontSize: 11)),
+                ]),
               ),
       ),
     );
