@@ -101,4 +101,22 @@ class AmadiBridge {
       return 'error:${e.message}';
     }
   }
+
+  /// versionName of an installed app, or null when it isn't installed.
+  static Future<String?> installedVersion(String package) async {
+    try {
+      return await _channel.invokeMethod<String>('installedVersion', {'package': package});
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Installs an app from downloaded APK files (base first, then splits). "ok" or an error.
+  static Future<String> installApks(List<String> paths) async {
+    try {
+      return await _channel.invokeMethod<String>('installApks', {'paths': paths}) ?? 'failed';
+    } catch (e) {
+      return '$e';
+    }
+  }
 }

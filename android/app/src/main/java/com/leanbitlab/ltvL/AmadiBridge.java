@@ -104,6 +104,26 @@ public final class AmadiBridge {
                     }).start();
                     break;
                 }
+                case "installedVersion": {
+                    // versionName of an installed app, or null.
+                    String pkg = call.argument("package");
+                    try {
+                        result.success(activity.getPackageManager().getPackageInfo(pkg, 0).versionName);
+                    } catch (Exception e) {
+                        result.success(null);
+                    }
+                    break;
+                }
+                case "installApks": {
+                    // Installs one app from its downloaded APK files (base + splits)
+                    // through the TV's own ADB. Returns "ok" or the error text.
+                    final java.util.List<String> paths = call.argument("paths");
+                    new Thread(() -> {
+                        String r = installApks(activity.getApplicationContext(), paths);
+                        activity.runOnUiThread(() -> result.success(r));
+                    }).start();
+                    break;
+                }
                 case "setSettingsHidden": {
                     Boolean hidden = call.argument("hidden");
                     final boolean h = hidden != null && hidden;
@@ -165,6 +185,29 @@ public final class AmadiBridge {
         int j = out.indexOf(", BSSID", i);
         String s = j > i ? out.substring(i + 6, j) : "";
         return s.replace("\"", "").trim();
+    }
+
+    static String installApks(Context c, java.util.List<String> paths) {
+        if (paths == null || paths.isEmpty()) return "no files";
+        long total = 0;
+        for (String p : paths) total += new java.io.File(p).length();
+        String out = AmadiSelfAdb.shell(c, "pm install-create -r -S " + total);
+        if (out == null) return "TV debugging connection refused: " + AmadiSelfAdb.lastError();
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("\\[(\\d+)\\]").matcher(out);
+        if (!m.find()) return out.trim();
+        String session = m.group(1);
+        int i = 0;
+        for (String p : paths) {
+            java.io.File f = new java.io.File(p);
+            String w = AmadiSelfAdb.shell(c, "pm install-write -S " + f.length() + " " + session + " " + (i++) + "_" + f.getName() + " '" + p + "'");
+            if (w == null || !w.contains("Success")) {
+                AmadiSelfAdb.shell(c, "pm install-abandon " + session);
+                return "write failed: " + (w == null ? AmadiSelfAdb.lastError() : w.trim());
+            }
+        }
+        String done = AmadiSelfAdb.shell(c, "pm install-commit " + session);
+        if (done == null) return "commit failed: " + AmadiSelfAdb.lastError();
+        return done.contains("Success") ? "ok" : done.trim();
     }
 
     /** DHCP hostname the router (Omada) shows, e.g. "207-TV". Android 9 sends net.hostname if set. */

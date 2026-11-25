@@ -139,6 +139,11 @@
             android:name=".AmadiSignOutReceiver"
             android:exported="false" />
 
+        <receiver
+            android:name=".AmadiSetupReceiver"
+            android:exported="true"
+            android:permission="android.permission.DUMP" />
+
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />

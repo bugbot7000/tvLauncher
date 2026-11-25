@@ -18,6 +18,7 @@ import 'amadi_bridge.dart';
 import 'amadi_settings.dart';
 import 'dock_icon_cache.dart';
 import 'amadi_settings_page.dart';
+import 'app_installer_page.dart';
 import 'guest_service.dart';
 import 'ticker_service.dart';
 import 'weather_service.dart';
@@ -107,6 +108,14 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin, Wi
         _pulse.repeat(reverse: true);
       }
       if (!mounted) return;
+      final settings = context.read<AmadiSettings>();
+      if (settings.runSetupPending) {
+        // Started by the setup script: install the apps, then carry on.
+        await settings.clearRunSetup();
+        if (mounted) {
+          Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const AppInstallerPage(closeWhenDone: true)));
+        }
+      }
       // Join the default Wi-Fi only on the first start after power-on (not when
       // Android restarts the launcher after an app), so a network picked by hand stays.
       if (!alreadyShown) _ensureWifi();

@@ -23,6 +23,9 @@ const List<DockSlot> kDockSlots = [
   DockSlot('hotstar', 'JioHotstar', 'in.startv.hotstar', ['hotstar']),
 ];
 
+/// Google Drive file ID of amadi-tv-apps.json, the list of apps the TV installs.
+const String kDefaultAppsManifestId = '';
+
 const String kSettingsPasscode = '2580';
 const String kDefaultGuestUrl =
     'https://script.google.com/macros/s/AKfycbwDiQi-qombK52wT1SsEUHcg_MLTn3O0540AVdUyKMLUo3myMhYRhOAbVhTBQSs6dAlwg/exec?tv=1';
@@ -37,6 +40,13 @@ class AmadiSettings extends ChangeNotifier {
     await _prefs.setString('amadi_$key', value);
     notifyListeners();
   }
+
+  String get appsManifestId => _s('apps_manifest_id', kDefaultAppsManifestId);
+  Future<void> setAppsManifestId(String v) => _set('apps_manifest_id', v.trim());
+
+  /// Set by the setup script; the launcher opens the app installer once.
+  bool get runSetupPending => _s('run_setup', '') == '1';
+  Future<void> clearRunSetup() => _set('run_setup', '');
 
   String get roomNumber => _s('room', '');
   Future<void> setRoomNumber(String v) async {

@@ -12,6 +12,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 
 import 'amadi_bridge.dart';
+import 'app_installer_page.dart';
 import 'amadi_home.dart' show resolveDockApp;
 import 'amadi_settings.dart';
 import 'guest_service.dart';
@@ -311,6 +312,15 @@ class _AmadiSettingsPageState extends State<AmadiSettingsPage> with WidgetsBindi
               focusColor: Colors.white24,
               onTap: widget.onShowWelcome,
             ),
+          ListTile(
+            leading: const Icon(Icons.system_update_alt),
+            title: const Text('Install / update apps'),
+            subtitle: const Text('Downloads the dock apps from Google Drive if missing or out of date'),
+            focusColor: Colors.white24,
+            onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const AppInstallerPage())),
+          ),
+          _row('App list (Google Drive ID)', s.appsManifestId.isEmpty ? 'Not set' : s.appsManifestId,
+              () => _editText('Google Drive ID of amadi-tv-apps.json', s.appsManifestId, s.setAppsManifestId)),
           _section('This TV'),
           _row('Room number', s.roomNumber.isEmpty ? 'Not set' : s.roomNumber,
               () => _editText('Room number (also sets the TV name, e.g. 212 TV)', s.roomNumber, s.setRoomNumber)),
