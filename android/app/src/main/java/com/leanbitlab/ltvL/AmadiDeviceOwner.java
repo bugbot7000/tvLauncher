@@ -27,6 +27,8 @@ public final class AmadiDeviceOwner {
     public static final String[] STREAMING_APPS = {
             "com.google.android.youtube.tv",
             "com.amazon.amazonvideo.livingroom",
+            "com.netflix.mediaclient",
+            "com.netflix.ninja",
             "in.startv.hotstar",
     };
     public static final String TV_SETTINGS = "com.android.tv.settings";

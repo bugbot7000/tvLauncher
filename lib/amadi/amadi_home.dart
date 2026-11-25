@@ -587,9 +587,7 @@ class _AppTileState extends State<_AppTile> {
       focusNode: widget.focusNode,
       onArrow: widget.onArrow,
       onActivate: () {
-        if (app != null && widget.slot.id == 'mx') {
-          appsService.launchApp(app);
-        } else if (app != null) {
+        if (app != null) {
           Navigator.of(context).push(PageRouteBuilder<void>(
             opaque: true,
             transitionDuration: const Duration(milliseconds: 250),
