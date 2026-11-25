@@ -191,7 +191,12 @@ public final class AmadiBridge {
         if (paths == null || paths.isEmpty()) return "no files";
         long total = 0;
         for (String p : paths) total += new java.io.File(p).length();
-        String out = AmadiSelfAdb.shell(c, "pm install-create -r -S " + total);
+        // The first time, the TV shows "Allow debugging?" for the launcher: wait up to 2 min for it.
+        String out = null;
+        for (int i = 0; i < 24 && out == null; i++) {
+            out = AmadiSelfAdb.shell(c, "pm install-create -r -S " + total);
+            if (out == null) { try { Thread.sleep(5000); } catch (InterruptedException ignored) {} }
+        }
         if (out == null) return "TV debugging connection refused: " + AmadiSelfAdb.lastError();
         java.util.regex.Matcher m = java.util.regex.Pattern.compile("\\[(\\d+)\\]").matcher(out);
         if (!m.find()) return out.trim();
