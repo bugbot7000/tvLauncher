@@ -141,12 +141,12 @@ class _AppInstallerPageState extends State<AppInstallerPage> {
 
   Future<T> _withRetry<T>(Future<T> Function() f) async {
     Object? last;
-    for (var attempt = 0; attempt < 8; attempt++) {
+    for (var attempt = 0; attempt < 30; attempt++) {
       try {
         return await f();
       } catch (e) {
         last = e;
-        await Future<void>.delayed(Duration(seconds: 3 + attempt * 3));
+        await Future<void>.delayed(Duration(seconds: (3 + attempt * 3).clamp(3, 30)));
       }
     }
     throw last!;

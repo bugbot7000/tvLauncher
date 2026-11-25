@@ -109,7 +109,14 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin, Wi
       }
       if (!mounted) return;
       final settings = context.read<AmadiSettings>();
-      if (settings.runSetupPending) {
+      // After power-on, finish any app that a past setup could not install.
+      var missing = false;
+      if (!alreadyShown && !settings.runSetupPending) {
+        for (final slot in kDockSlots) {
+          if (await AmadiBridge.installedVersion(slot.package) == null) missing = true;
+        }
+      }
+      if (settings.runSetupPending || missing) {
         // Started by the setup script: install the apps, then carry on.
         await settings.clearRunSetup();
         if (mounted) {
