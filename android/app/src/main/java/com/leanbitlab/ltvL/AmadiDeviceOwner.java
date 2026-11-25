@@ -28,6 +28,7 @@ public final class AmadiDeviceOwner {
             "com.google.android.youtube.tv",
             "com.amazon.amazonvideo.livingroom",
             "com.graymatrix.did",
+            "com.apple.atve.androidtv.appletv",
             "com.netflix.mediaclient",
             "com.netflix.ninja",
             "in.startv.hotstar",

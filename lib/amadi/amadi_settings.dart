@@ -18,7 +18,7 @@ class DockSlot {
 
 const List<DockSlot> kDockSlots = [
   DockSlot('youtube', 'YouTube', 'com.google.android.youtube.tv', ['youtube']),
-  DockSlot('zee5', 'ZEE5', 'com.graymatrix.did', ['zee5']),
+  DockSlot('appletv', 'Apple TV', 'com.apple.atve.androidtv.appletv', ['apple tv']),
   DockSlot('prime', 'Prime Video', 'com.amazon.amazonvideo.livingroom', ['prime video', 'primevideo', 'amazon video']),
   DockSlot('hotstar', 'JioHotstar', 'in.startv.hotstar', ['hotstar']),
 ];
@@ -60,7 +60,7 @@ class AmadiSettings extends ChangeNotifier {
   List<String> get cachedTicker => _prefs.getStringList('amadi_cached_ticker') ?? const [];
   Future<void> setCachedTicker(List<String> v) async => _prefs.setStringList('amadi_cached_ticker', v);
 
-  /// Hides ZEE5, Prime Video and JioHotstar from the dock.
+  /// Hides Apple TV, Prime Video and JioHotstar from the dock.
   bool get youtubeOnly => _prefs.getBool('amadi_youtube_only') ?? false;
   Future<void> setYoutubeOnly(bool v) async {
     await _prefs.setBool('amadi_youtube_only', v);
