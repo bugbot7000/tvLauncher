@@ -38,6 +38,7 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
     <uses-permission android:name="android.permission.INTERNET" />
 
@@ -138,6 +139,11 @@
 
         <receiver
             android:name=".AmadiSignOutReceiver"
+            android:exported="false" />
+
+        <service
+            android:name=".AmadiWifiService"
+            android:process=":wifi"
             android:exported="false" />
 
         <receiver
