@@ -56,7 +56,8 @@ public class Main extends Activity {
                     return;
                 }
             } catch (Throwable t) {
-                show("Setting up Amadi TV…\nWi-Fi dropped, retrying (" + attempt + ")");
+                android.util.Log.w("AmadiFetch", "attempt " + attempt, t);
+                show("Setting up Amadi TV…\nRetrying (" + attempt + ")\n\n" + t.getClass().getSimpleName() + ": " + t.getMessage());
             }
             try { Thread.sleep(Math.min(3000L * attempt, 15000L)); } catch (InterruptedException ignored) {}
         }
