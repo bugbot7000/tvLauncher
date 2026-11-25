@@ -37,7 +37,9 @@ class _AppJob {
 class AppInstallerPage extends StatefulWidget {
   /// Close by itself when everything is installed (used after the setup script).
   final bool closeWhenDone;
-  const AppInstallerPage({super.key, this.closeWhenDone = false});
+  /// Close even if something failed (power-on retries must not leave guests on this screen).
+  final bool closeAlways;
+  const AppInstallerPage({super.key, this.closeWhenDone = false, this.closeAlways = false});
 
   @override
   State<AppInstallerPage> createState() => _AppInstallerPageState();
@@ -71,6 +73,10 @@ class _AppInstallerPageState extends State<AppInstallerPage> {
         _headline = 'Could not download the app list. Check the Wi-Fi and try again.';
         _running = false;
       });
+      if (widget.closeAlways) {
+        await Future<void>.delayed(const Duration(seconds: 3));
+        if (mounted) Navigator.of(context).maybePop();
+      }
       return;
     }
     for (final a in (manifest['apps'] as List? ?? const [])) {
@@ -133,7 +139,7 @@ class _AppInstallerPageState extends State<AppInstallerPage> {
       _running = false;
       _headline = anyFailed ? 'Some apps did not install. Try again later.' : 'All apps are ready';
     });
-    if (!anyFailed && widget.closeWhenDone) {
+    if ((!anyFailed && widget.closeWhenDone) || widget.closeAlways) {
       await Future<void>.delayed(const Duration(seconds: 3));
       if (mounted) Navigator.of(context).maybePop();
     }

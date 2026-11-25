@@ -117,10 +117,12 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin, Wi
         }
       }
       if (settings.runSetupPending || missing) {
-        // Started by the setup script: install the apps, then carry on.
+        // Started by the setup script, or an app is missing after power-on: install, then carry on.
+        final fromScript = settings.runSetupPending;
         await settings.clearRunSetup();
         if (mounted) {
-          Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const AppInstallerPage(closeWhenDone: true)));
+          Navigator.of(context).push(MaterialPageRoute<void>(
+              builder: (_) => AppInstallerPage(closeWhenDone: true, closeAlways: !fromScript)));
         }
       }
       // Join the default Wi-Fi only on the first start after power-on (not when
