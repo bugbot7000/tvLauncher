@@ -119,4 +119,10 @@ class AmadiBridge {
       return '$e';
     }
   }
+
+  static Future<void> wifiHighPerf(bool on) async {
+    try {
+      await _channel.invokeMethod('wifiHighPerf', {'on': on});
+    } catch (_) {}
+  }
 }

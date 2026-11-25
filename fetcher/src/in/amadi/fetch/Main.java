@@ -51,10 +51,17 @@ public class Main extends Activity {
         File out = new File(dir, name);
         File done = new File(dir, name + ".done");
         done.delete(); // keep any partial file: a restarted download resumes it
-        for (int attempt = 1; attempt <= 60; attempt++) {
+        // Keep Wi-Fi out of power-save while downloading (power-save causes drops on these TVs).
+        android.net.wifi.WifiManager wm = (android.net.wifi.WifiManager) getApplicationContext().getSystemService(WIFI_SERVICE);
+        android.net.wifi.WifiManager.WifiLock lock = wm == null ? null
+                : wm.createWifiLock(android.net.wifi.WifiManager.WIFI_MODE_FULL_HIGH_PERF, "amadi-fetch");
+        if (lock != null) lock.acquire();
+        // Retry until done: a TV left overnight finishes whenever the Wi-Fi lets it.
+        for (int attempt = 1; ; attempt++) {
             try {
                 if (download(url, out)) {
                     new FileOutputStream(done).close();
+                    if (lock != null) lock.release();
                     show("Setting up Amadi TV…\nInstalling");
                     return;
                 }
@@ -64,7 +71,6 @@ public class Main extends Activity {
             }
             try { Thread.sleep(Math.min(3000L * attempt, 15000L)); } catch (InterruptedException ignored) {}
         }
-        show("Download failed. Check the Wi-Fi and run the setup again.");
     }
 
     /** Returns true when the whole file is on disk. Resumes from what is already there. */

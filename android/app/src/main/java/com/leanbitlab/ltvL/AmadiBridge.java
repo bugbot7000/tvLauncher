@@ -24,6 +24,7 @@ import io.flutter.plugin.common.MethodChannel;
 public final class AmadiBridge {
     private static final String CHANNEL = "amadi/bridge";
     private static BroadcastReceiver screenReceiver;
+    private static WifiManager.WifiLock wifiLock;
 
     private AmadiBridge() {}
 
@@ -114,6 +115,18 @@ public final class AmadiBridge {
                     } catch (Exception e) {
                         result.success(null);
                     }
+                    break;
+                }
+                case "wifiHighPerf": {
+                    // Keeps Wi-Fi out of power-save while the installer downloads.
+                    Boolean on = call.argument("on");
+                    WifiManager wm = (WifiManager) activity.getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+                    if (wm != null) {
+                        if (wifiLock == null) wifiLock = wm.createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, "amadi-install");
+                        if (on != null && on && !wifiLock.isHeld()) wifiLock.acquire();
+                        if ((on == null || !on) && wifiLock.isHeld()) wifiLock.release();
+                    }
+                    result.success(true);
                     break;
                 }
                 case "installApks": {

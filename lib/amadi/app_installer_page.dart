@@ -56,7 +56,14 @@ class _AppInstallerPageState extends State<AppInstallerPage> {
     _run();
   }
 
+  @override
+  void dispose() {
+    AmadiBridge.wifiHighPerf(false);
+    super.dispose();
+  }
+
   Future<void> _run() async {
+    AmadiBridge.wifiHighPerf(true);
     final manifestId = context.read<AmadiSettings>().appsManifestId;
     if (manifestId.isEmpty) {
       setState(() {
