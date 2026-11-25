@@ -49,6 +49,10 @@ class AmadiSettings extends ChangeNotifier {
   Future<void> clearRunSetup() => _set('run_setup', '');
 
   /// TV volume set at every power-on / screen-on. Empty = leave the volume alone.
+  /// Whole-screen magnification for low-resolution panels (1.0 = off).
+  double get uiZoom => double.tryParse(_s('ui_zoom', '1.0')) ?? 1.0;
+  Future<void> setUiZoom(double v) => _set('ui_zoom', v.toStringAsFixed(2));
+
   String get startVolume => _s('start_volume', '15');
   Future<void> setStartVolume(String v) => _set('start_volume', v.trim());
 

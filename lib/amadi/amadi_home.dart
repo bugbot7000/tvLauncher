@@ -217,7 +217,7 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin, Wi
             backgroundColor: Colors.black,
             body: DefaultTextStyle.merge(
               style: const TextStyle(fontFamily: 'Roboto'),
-              child: AnimatedBuilder(
+              child: _zoomed(settings.uiZoom, AnimatedBuilder(
               animation: Listenable.merge([_reveal, _intro, _wallFade]),
               builder: (context, _) {
                 final t = Curves.easeInOutCubic.transform(_reveal.value);
@@ -250,12 +250,34 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin, Wi
                   ],
                 );
               },
-            ),
+            )),
             ),
           ),
         ),
       ),
     );
+  }
+
+  /// Renders the whole home screen in a smaller logical canvas and scales it up to
+  /// fill the panel, so a low-resolution TV shows larger clock/dock/welcome. 1.0 = off.
+  Widget _zoomed(double zoom, Widget child) {
+    if (zoom <= 1.0) return child;
+    return LayoutBuilder(builder: (ctx, c) {
+      final w = c.maxWidth / zoom, h = c.maxHeight / zoom;
+      return ClipRect(
+        child: Transform.scale(
+          scale: zoom,
+          alignment: Alignment.center,
+          child: OverflowBox(
+            minWidth: w, maxWidth: w, minHeight: h, maxHeight: h,
+            child: MediaQuery(
+              data: MediaQuery.of(ctx).copyWith(size: Size(w, h)),
+              child: SizedBox(width: w, height: h, child: child),
+            ),
+          ),
+        ),
+      );
+    });
   }
 
   Widget _background(double t) {

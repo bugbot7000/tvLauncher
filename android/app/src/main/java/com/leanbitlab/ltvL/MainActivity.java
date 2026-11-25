@@ -24,6 +24,8 @@ import android.content.pm.PackageManager;
 import android.content.pm.*;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
+import android.content.res.Resources;
+import android.util.DisplayMetrics;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.net.ConnectivityManager;
@@ -308,26 +310,40 @@ public class MainActivity extends FlutterActivity {
     }
 
     private byte[] getApplicationBanner(String packageName) {
-        byte[] imageBytes = new byte[0];
-
-        PackageManager packageManager = getPackageManager();
+        PackageManager pm = getPackageManager();
         try {
-            ApplicationInfo info = packageManager.getApplicationInfo(packageName, 0);
-            // Many TV apps (e.g. Free TV, S0undTV) declare android:banner on their leanback activity
-            // only; getActivityBanner falls back to the application banner when the activity has none.
-            Intent leanbackIntent = packageManager.getLeanbackLaunchIntentForPackage(packageName);
-            Drawable drawable = leanbackIntent != null ? packageManager.getActivityBanner(leanbackIntent) : null;
-            if (drawable == null) {
-                drawable = info.loadBanner(packageManager);
+            ApplicationInfo info = pm.getApplicationInfo(packageName, 0);
+            // Find the banner resource id (activity's android:banner first, then application's).
+            int bannerRes = 0;
+            Intent leanbackIntent = pm.getLeanbackLaunchIntentForPackage(packageName);
+            if (leanbackIntent != null) {
+                ActivityInfo ai = leanbackIntent.resolveActivityInfo(pm, 0);
+                if (ai != null && ai.banner != 0) bannerRes = ai.banner;
             }
-
-            if (drawable != null) {
-                imageBytes = drawableToByteArray(drawable);
-            }
+            if (bannerRes == 0) bannerRes = info.banner;
+            // Load that resource at the app's highest-density (xxxhdpi) version so the tile is crisp.
+            byte[] hi = highResBytes(packageName, bannerRes, 640);
+            if (hi.length > 0) return hi;
+            // Fallback: whatever the system gives at the current density.
+            Drawable drawable = leanbackIntent != null ? pm.getActivityBanner(leanbackIntent) : null;
+            if (drawable == null) drawable = info.loadBanner(pm);
+            if (drawable != null) return drawableToByteArray(drawable, 640);
         } catch (PackageManager.NameNotFoundException ignored) {
         }
+        return new byte[0];
+    }
 
-        return imageBytes;
+    /** Loads a drawable resource from another app at xxxhdpi and returns PNG bytes, min target width. */
+    private byte[] highResBytes(String packageName, int resId, int minWidth) {
+        if (resId == 0) return new byte[0];
+        try {
+            Resources res = getPackageManager().getResourcesForApplication(packageName);
+            Drawable d = null;
+            try { d = res.getDrawableForDensity(resId, DisplayMetrics.DENSITY_XXXHIGH, getTheme()); } catch (Throwable ignored) {}
+            if (d == null) { try { d = res.getDrawable(resId, getTheme()); } catch (Throwable ignored) {} }
+            if (d != null) return drawableToByteArray(d, minWidth);
+        } catch (Throwable ignored) {}
+        return new byte[0];
     }
 
     private byte[] getApplicationIcon(String packageName) {
@@ -336,10 +352,11 @@ public class MainActivity extends FlutterActivity {
         PackageManager packageManager = getPackageManager();
         try {
             ApplicationInfo info = packageManager.getApplicationInfo(packageName, 0);
+            byte[] hi = highResBytes(packageName, info.icon, 320);
+            if (hi.length > 0) return hi;
             Drawable drawable = info.loadIcon(packageManager);
-
             if (drawable != null) {
-                imageBytes = drawableToByteArray(drawable);
+                imageBytes = drawableToByteArray(drawable, 320);
             }
         } catch (PackageManager.NameNotFoundException ignored) {
         }
@@ -520,6 +537,21 @@ public class MainActivity extends FlutterActivity {
         }
 
         return success;
+    }
+
+    /** Rasterises a drawable to PNG, upscaling small art to at least minWidth so tiles stay sharp. */
+    private byte[] drawableToByteArray(Drawable drawable, int minWidth) {
+        int iw = drawable.getIntrinsicWidth(), ih = drawable.getIntrinsicHeight();
+        if (iw <= 0 || ih <= 0) return new byte[0];
+        int w = iw, h = ih;
+        if (w < minWidth) { h = (int) ((long) h * minWidth / w); w = minWidth; }
+        Bitmap bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(bitmap);
+        drawable.setBounds(0, 0, w, h);
+        drawable.draw(canvas);
+        ByteArrayOutputStream stream = new ByteArrayOutputStream();
+        bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream);
+        return stream.toByteArray();
     }
 
     private byte[] drawableToByteArray(Drawable drawable) {

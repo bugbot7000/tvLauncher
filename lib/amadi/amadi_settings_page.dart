@@ -324,6 +324,12 @@ class _AmadiSettingsPageState extends State<AmadiSettingsPage> with WidgetsBindi
           _section('This TV'),
           _row('Volume at power-on', s.startVolume.isEmpty ? 'Off' : s.startVolume,
               () => _editText('Volume when the TV is turned on (empty = off)', s.startVolume, s.setStartVolume)),
+          _row('Display zoom', '${(s.uiZoom * 100).round()}%', () {
+            // Cycle 100 -> 115 -> 130 -> 145 -> 100 for low-resolution panels.
+            const steps = [1.0, 1.15, 1.3, 1.45];
+            final i = steps.indexWhere((v) => (v - s.uiZoom).abs() < 0.01);
+            s.setUiZoom(steps[(i + 1) % steps.length]);
+          }),
           _row('Room number', s.roomNumber.isEmpty ? 'Not set' : s.roomNumber,
               () => _editText('Room number (also sets the TV name, e.g. 212 TV)', s.roomNumber, s.setRoomNumber)),
           _row(
