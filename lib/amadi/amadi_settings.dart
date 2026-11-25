@@ -20,7 +20,6 @@ const List<DockSlot> kDockSlots = [
   DockSlot('youtube', 'YouTube', 'com.google.android.youtube.tv', ['youtube']),
   DockSlot('prime', 'Prime Video', 'com.amazon.amazonvideo.livingroom', ['prime video', 'primevideo', 'amazon video']),
   DockSlot('hotstar', 'JioHotstar', 'in.startv.hotstar', ['hotstar']),
-  DockSlot('netflix', 'Netflix', 'com.netflix.mediaclient', ['netflix']),
 ];
 
 const String kSettingsPasscode = '2580';
