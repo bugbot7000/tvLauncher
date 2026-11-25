@@ -96,10 +96,11 @@ class _AppInstallerPageState extends State<AppInstallerPage> {
     final base = (await getExternalStorageDirectory()) ?? await getApplicationSupportDirectory();
     for (final job in _jobs) {
       final have = await AmadiBridge.installedVersion(job.package);
-      // Skip when installed and the same or newer than the list's version.
+      // Keep every TV on the EXACT Drive version: reinstall if the installed
+      // versionCode differs at all (older or newer), download only when it differs.
       final haveCode = int.tryParse(have ?? '');
       final wantCode = int.tryParse(job.version);
-      if (have != null && (wantCode == null || (haveCode != null && haveCode >= wantCode))) {
+      if (have != null && (wantCode == null || (haveCode != null && haveCode == wantCode))) {
         setState(() {
           job.status = 'Up to date';
           job.progress = 1;
