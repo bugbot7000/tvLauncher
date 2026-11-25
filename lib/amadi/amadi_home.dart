@@ -91,9 +91,13 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin, Wi
       final n = DateTime.now();
       if (mounted && n.minute != _now.minute) setState(() => _now = n);
     });
-    AmadiBridge.onScreenOn(_showWelcome);
+    AmadiBridge.onScreenOn(() {
+      _showWelcome();
+      _ensureWifi();
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if (await AmadiBridge.welcomeAlreadyShownThisBoot()) {
+      final alreadyShown = await AmadiBridge.welcomeAlreadyShownThisBoot();
+      if (alreadyShown) {
         setState(() => _welcome = false);
         _reveal.value = 1;
         _intro.value = 1;
@@ -103,7 +107,9 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin, Wi
         _pulse.repeat(reverse: true);
       }
       if (!mounted) return;
-      _ensureWifi();
+      // Join the default Wi-Fi only on the first start after power-on (not when
+      // Android restarts the launcher after an app), so a network picked by hand stays.
+      if (!alreadyShown) _ensureWifi();
       final room = context.read<AmadiSettings>().roomNumber;
       if (room.isNotEmpty) AmadiBridge.setDeviceName('$room TV');
     });
@@ -126,7 +132,6 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin, Wi
     _reveal.value = 0;
     _intro.forward(from: 0);
     _rootFocus.requestFocus();
-    _ensureWifi();
   }
 
   void _dismissWelcome() {
@@ -207,10 +212,7 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin, Wi
                     if (t > 0) IgnorePointer(child: Opacity(opacity: t, child: const _Scrims())),
                     IgnorePointer(
                       ignoring: _welcome,
-                      child: Opacity(
-                        opacity: t,
-                        child: _homeUi(settings, online, weather),
-                      ),
+                      child: _homeUi(settings, online, weather, _reveal.value),
                     ),
                     _greeting(t, guest, settings.roomNumber),
                     if (_welcome)
@@ -337,20 +339,41 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin, Wi
     );
   }
 
-  Widget _homeUi(AmadiSettings settings, bool online, WeatherService weather) {
+  /// [r] runs 0 to 1 as the welcome panel is dismissed: the clock block glides in
+  /// from the right, the dock rises from the bottom, then the ticker fades in.
+  Widget _homeUi(AmadiSettings settings, bool online, WeatherService weather, double r) {
+    double phase(double a, double b) => Curves.easeOutCubic.transform(((r - a) / (b - a)).clamp(0.0, 1.0));
+    final clock = phase(0.30, 0.80);
+    final dock = phase(0.40, 0.90);
+    final ticker = phase(0.75, 1.0);
     return Padding(
       padding: const EdgeInsets.fromLTRB(48, 32, 48, 28),
       child: Stack(
         children: [
-          Align(alignment: Alignment.topLeft, child: _clockAndWeather(online, weather, settings.weatherPlace)),
+          Align(
+            alignment: Alignment.topLeft,
+            child: Opacity(
+              opacity: clock,
+              child: Transform.translate(
+                offset: Offset(140 * (1 - clock), 0),
+                child: _clockAndWeather(online, weather, settings.weatherPlace),
+              ),
+            ),
+          ),
           Align(
             alignment: Alignment.bottomCenter,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const _Ticker(),
+                Opacity(opacity: ticker, child: const _Ticker()),
                 const SizedBox(height: 18),
-                _Dock(firstFocus: _firstTileFocus, onOpenSettings: _openSettings),
+                Opacity(
+                  opacity: dock,
+                  child: Transform.translate(
+                    offset: Offset(0, 160 * (1 - dock)),
+                    child: _Dock(firstFocus: _firstTileFocus, onOpenSettings: _openSettings),
+                  ),
+                ),
               ],
             ),
           ),
