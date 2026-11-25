@@ -19,6 +19,8 @@ public class AmadiSetupReceiver extends BroadcastReceiver {
         SharedPreferences.Editor e = p.edit();
         String room = intent.getStringExtra("room");
         if (room != null && !room.trim().isEmpty()) e.putString("flutter.amadi_room", room.trim());
+        String zoom = intent.getStringExtra("zoom");
+        if (zoom != null && !zoom.trim().isEmpty()) e.putString("flutter.amadi_ui_zoom", zoom.trim());
         if (intent.getBooleanExtra("setup", false)) e.putString("flutter.amadi_run_setup", "1");
         e.commit();
         setResultData("ok");
