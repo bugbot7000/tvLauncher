@@ -365,7 +365,7 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin, Wi
     // welcome, so artwork, text and shaders are ready before the animation starts.
     const warm = 0.005;
     final clock = phase(0.30, 0.80);
-    final dock = phase(0.40, 0.90);
+    final dock = phase(0.35, 0.75);
     final ticker = phase(0.75, 1.0);
     return Padding(
       padding: const EdgeInsets.fromLTRB(48, 32, 48, 28),
@@ -392,7 +392,7 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin, Wi
                   opacity: dock < warm ? warm : dock,
                   child: Transform.translate(
                     offset: Offset(0, 160 * (1 - dock)),
-                    child: RepaintBoundary(child: _Dock(firstFocus: _firstTileFocus, onOpenSettings: _openSettings)),
+                    child: _Dock(firstFocus: _firstTileFocus, onOpenSettings: _openSettings, reveal: r),
                   ),
                 ),
               ],
@@ -516,7 +516,9 @@ App? resolveDockApp(DockSlot slot, List<App> apps, AmadiSettings settings) {
 class _Dock extends StatefulWidget {
   final FocusNode firstFocus;
   final VoidCallback onOpenSettings;
-  const _Dock({required this.firstFocus, required this.onOpenSettings});
+  /// 0 to 1 as the home screen appears: tiles rise one by one, left to right.
+  final double reveal;
+  const _Dock({required this.firstFocus, required this.onOpenSettings, this.reveal = 1});
 
   @override
   State<_Dock> createState() => _DockState();
@@ -576,15 +578,26 @@ class _DockState extends State<_Dock> {
             children: [
               for (var i = 0; i < slots.length; i++) ...[
                 if (i > 0) const SizedBox(width: 12),
-                SizedBox(
-                  width: tileW,
-                  child: _AppTile(
-                    slot: slots[i],
-                    app: resolveDockApp(slots[i], apps, settings),
-                    focusNode: _nodes[i],
-                    onArrow: (e) => _move(i, e),
-                  ),
-                ),
+                Builder(builder: (_) {
+                  // Each tile starts a little after the one to its left.
+                  final start = 0.45 + i * 0.09;
+                  final t = ((widget.reveal - start) / 0.28).clamp(0.0, 1.0);
+                  final p = Curves.easeOutBack.transform(t);
+                  final tile = SizedBox(
+                    width: tileW,
+                    child: _AppTile(
+                      slot: slots[i],
+                      app: resolveDockApp(slots[i], apps, settings),
+                      focusNode: _nodes[i],
+                      onArrow: (e) => _move(i, e),
+                    ),
+                  );
+                  if (t >= 1) return tile;
+                  return Opacity(
+                    opacity: p.clamp(0.005, 1.0),
+                    child: Transform.translate(offset: Offset(0, 40 * (1 - p)), child: tile),
+                  );
+                }),
               ],
             ],
           );
