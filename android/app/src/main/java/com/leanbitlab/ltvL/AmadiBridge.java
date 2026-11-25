@@ -129,6 +129,14 @@ public final class AmadiBridge {
                     result.success(true);
                     break;
                 }
+                case "volumeInfo": {
+                    android.media.AudioManager am = (android.media.AudioManager) activity.getSystemService(Context.AUDIO_SERVICE);
+                    java.util.HashMap<String, Object> m = new java.util.HashMap<>();
+                    m.put("max", am == null ? 0 : am.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC));
+                    m.put("now", am == null ? 0 : am.getStreamVolume(android.media.AudioManager.STREAM_MUSIC));
+                    result.success(m);
+                    break;
+                }
                 case "installApks": {
                     // Installs one app from its downloaded APK files (base + splits)
                     // through the TV's own ADB. Returns "ok" or the error text.

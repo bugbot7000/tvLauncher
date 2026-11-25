@@ -322,6 +322,8 @@ class _AmadiSettingsPageState extends State<AmadiSettingsPage> with WidgetsBindi
           _row('App list (Google Drive ID)', s.appsManifestId.isEmpty ? 'Not set' : s.appsManifestId,
               () => _editText('Google Drive ID of amadi-tv-apps.json', s.appsManifestId, s.setAppsManifestId)),
           _section('This TV'),
+          _row('Volume at power-on', s.startVolume.isEmpty ? 'Off' : s.startVolume,
+              () => _editText('Volume when the TV is turned on (empty = off)', s.startVolume, s.setStartVolume)),
           _row('Room number', s.roomNumber.isEmpty ? 'Not set' : s.roomNumber,
               () => _editText('Room number (also sets the TV name, e.g. 212 TV)', s.roomNumber, s.setRoomNumber)),
           _row(

@@ -48,6 +48,10 @@ class AmadiSettings extends ChangeNotifier {
   bool get runSetupPending => _s('run_setup', '') == '1';
   Future<void> clearRunSetup() => _set('run_setup', '');
 
+  /// TV volume set at every power-on / screen-on. Empty = leave the volume alone.
+  String get startVolume => _s('start_volume', '15');
+  Future<void> setStartVolume(String v) => _set('start_volume', v.trim());
+
   String get roomNumber => _s('room', '');
   Future<void> setRoomNumber(String v) async {
     await _set('room', v.trim());
