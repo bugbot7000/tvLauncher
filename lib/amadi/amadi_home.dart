@@ -592,10 +592,10 @@ class _DockState extends State<_Dock> {
                       onArrow: (e) => _move(i, e),
                     ),
                   );
-                  if (t >= 1) return tile;
+                  // Same widget structure at every frame so tiles keep their state.
                   return Opacity(
-                    opacity: p.clamp(0.005, 1.0),
-                    child: Transform.translate(offset: Offset(0, 40 * (1 - p)), child: tile),
+                    opacity: t >= 1 ? 1.0 : p.clamp(0.005, 1.0),
+                    child: Transform.translate(offset: Offset(0, t >= 1 ? 0 : 40 * (1 - p)), child: tile),
                   );
                 }),
               ],
