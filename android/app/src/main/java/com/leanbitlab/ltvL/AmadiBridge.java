@@ -91,7 +91,7 @@ public final class AmadiBridge {
                     // Enables a disabled app (e.g. the Aptoide store) and opens it.
                     final String pkg = call.argument("package");
                     new Thread(() -> {
-                        AmadiSelfAdb.shell(activity, "pm enable " + pkg);
+                        AmadiSelfAdb.shell(activity, "pm enable " + pkg + "; appops set " + pkg + " REQUEST_INSTALL_PACKAGES allow; settings put secure install_non_market_apps 1");
                         activity.runOnUiThread(() -> {
                             android.content.pm.PackageManager pm = activity.getPackageManager();
                             android.content.Intent i = pm.getLeanbackLaunchIntentForPackage(pkg);
