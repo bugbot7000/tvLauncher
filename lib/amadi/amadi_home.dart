@@ -220,14 +220,14 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin, Wi
                         left: 0,
                         right: 0,
                         bottom: 32,
-                        child: AnimatedBuilder(
+                        child: RepaintBoundary(child: AnimatedBuilder(
                           animation: _pulse,
                           builder: (_, __) => Opacity(
                             opacity: (_intro.value * 2 - 1).clamp(0.0, 1.0) * (0.25 + 0.7 * _pulse.value),
                             child: const Text('Press any button to continue',
                                 textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontSize: 15)),
                           ),
-                        ),
+                        )),
                       ),
                   ],
                 );
@@ -343,6 +343,9 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin, Wi
   /// from the right, the dock rises from the bottom, then the ticker fades in.
   Widget _homeUi(AmadiSettings settings, bool online, WeatherService weather, double r) {
     double phase(double a, double b) => Curves.easeOutCubic.transform(((r - a) / (b - a)).clamp(0.0, 1.0));
+    // Never fully 0: at 1/255 the parts are still drawn (invisibly) during the
+    // welcome, so artwork, text and shaders are ready before the animation starts.
+    const warm = 0.005;
     final clock = phase(0.30, 0.80);
     final dock = phase(0.40, 0.90);
     final ticker = phase(0.75, 1.0);
@@ -353,10 +356,10 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin, Wi
           Align(
             alignment: Alignment.topLeft,
             child: Opacity(
-              opacity: clock,
+              opacity: clock < warm ? warm : clock,
               child: Transform.translate(
                 offset: Offset(140 * (1 - clock), 0),
-                child: _clockAndWeather(online, weather, settings.weatherPlace),
+                child: RepaintBoundary(child: _clockAndWeather(online, weather, settings.weatherPlace)),
               ),
             ),
           ),
@@ -365,13 +368,13 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin, Wi
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Opacity(opacity: ticker, child: const _Ticker()),
+                Opacity(opacity: ticker < warm ? warm : ticker, child: const RepaintBoundary(child: _Ticker())),
                 const SizedBox(height: 18),
                 Opacity(
-                  opacity: dock,
+                  opacity: dock < warm ? warm : dock,
                   child: Transform.translate(
                     offset: Offset(0, 160 * (1 - dock)),
-                    child: _Dock(firstFocus: _firstTileFocus, onOpenSettings: _openSettings),
+                    child: RepaintBoundary(child: _Dock(firstFocus: _firstTileFocus, onOpenSettings: _openSettings)),
                   ),
                 ),
               ],
