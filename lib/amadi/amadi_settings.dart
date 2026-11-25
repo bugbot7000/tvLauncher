@@ -18,6 +18,7 @@ class DockSlot {
 
 const List<DockSlot> kDockSlots = [
   DockSlot('youtube', 'YouTube', 'com.google.android.youtube.tv', ['youtube']),
+  DockSlot('netflix', 'Netflix', 'com.netflix.mediaclient', ['netflix']),
   DockSlot('prime', 'Prime Video', 'com.amazon.amazonvideo.livingroom', ['prime video', 'primevideo', 'amazon video']),
   DockSlot('hotstar', 'JioHotstar', 'in.startv.hotstar', ['hotstar']),
 ];
