@@ -1,7 +1,7 @@
 /*
  * Amadi setup downloader (GPL-3.0-or-later).
  * Tiny app the setup script sends first. It downloads a file (the launcher) from
- * Google Drive to /sdcard/Download, resuming after Wi-Fi drops, then writes
+ * Google Drive to its own folder on /sdcard, resuming after Wi-Fi drops, then writes
  * <name>.done so the script knows it can install it.
  *   am start -n in.amadi.fetch/.Main --es url <url> --es name amadi-launcher.apk
  */
@@ -43,7 +43,10 @@ public class Main extends Activity {
     private void show(final String s) { runOnUiThread(() -> text.setText(s)); }
 
     private void run(String url, String name) {
-        File dir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+        // App's own folder (/sdcard/Android/data/in.amadi.fetch/files): no permission needed,
+        // and the ADB shell can read it to install.
+        File dir = getExternalFilesDir(null);
+        if (dir == null) dir = getFilesDir();
         dir.mkdirs();
         File out = new File(dir, name);
         File done = new File(dir, name + ".done");
