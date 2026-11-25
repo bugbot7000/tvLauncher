@@ -41,6 +41,15 @@ class AmadiBridge {
     }
   }
 
+  /// Enables (if disabled) and opens an app by package name.
+  static Future<bool> openPackage(String package) async {
+    try {
+      return await _channel.invokeMethod<bool>('openPackage', {'package': package}) ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
   static Future<void> setSettingsHidden(bool hidden) async {
     try {
       await _channel.invokeMethod('setSettingsHidden', {'hidden': hidden});

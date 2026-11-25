@@ -87,6 +87,23 @@ public final class AmadiBridge {
                     }).start();
                     break;
                 }
+                case "openPackage": {
+                    // Enables a disabled app (e.g. the Aptoide store) and opens it.
+                    final String pkg = call.argument("package");
+                    new Thread(() -> {
+                        AmadiSelfAdb.shell(activity, "pm enable " + pkg);
+                        activity.runOnUiThread(() -> {
+                            android.content.pm.PackageManager pm = activity.getPackageManager();
+                            android.content.Intent i = pm.getLeanbackLaunchIntentForPackage(pkg);
+                            if (i == null) i = pm.getLaunchIntentForPackage(pkg);
+                            if (i == null) { result.success(false); return; }
+                            i.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+                            activity.startActivity(i);
+                            result.success(true);
+                        });
+                    }).start();
+                    break;
+                }
                 case "setSettingsHidden": {
                     Boolean hidden = call.argument("hidden");
                     final boolean h = hidden != null && hidden;

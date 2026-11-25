@@ -311,6 +311,19 @@ class _AmadiSettingsPageState extends State<AmadiSettingsPage> with WidgetsBindi
               focusColor: Colors.white24,
               onTap: widget.onShowWelcome,
             ),
+          ListTile(
+            leading: const Icon(Icons.shop_outlined),
+            title: const Text('Open Aptoide app store'),
+            subtitle: const Text('Install or update apps. Pick which app each dock tile opens under Dock apps.'),
+            focusColor: Colors.white24,
+            onTap: () async {
+              final ok = await AmadiBridge.openPackage('cm.aptoidetv.pt');
+              if (!ok && mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Aptoide is not installed on this TV.')));
+              }
+            },
+          ),
           _section('This TV'),
           _row('Room number', s.roomNumber.isEmpty ? 'Not set' : s.roomNumber,
               () => _editText('Room number (also sets the TV name, e.g. 212 TV)', s.roomNumber, s.setRoomNumber)),
