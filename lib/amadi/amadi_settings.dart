@@ -18,9 +18,9 @@ class DockSlot {
 
 const List<DockSlot> kDockSlots = [
   DockSlot('youtube', 'YouTube', 'com.google.android.youtube.tv', ['youtube']),
-  DockSlot('netflix', 'Netflix', 'com.netflix.ninja', ['netflix']),
   DockSlot('prime', 'Prime Video', 'com.amazon.amazonvideo.livingroom', ['prime video', 'primevideo', 'amazon video']),
   DockSlot('hotstar', 'JioHotstar', 'in.startv.hotstar', ['hotstar']),
+  DockSlot('mx', 'MX Player', 'com.mxtech.videoplayer.television', ['mx player']),
 ];
 
 const String kSettingsPasscode = '2580';

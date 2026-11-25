@@ -69,10 +69,12 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin, Wi
     WidgetsBinding.instance.addObserver(this);
     _reveal = AnimationController(vsync: this, animationBehavior: AnimationBehavior.preserve, duration: const Duration(milliseconds: 1600));
     _intro = AnimationController(vsync: this, animationBehavior: AnimationBehavior.preserve, duration: const Duration(milliseconds: 1100));
-    _pulse = AnimationController(vsync: this, animationBehavior: AnimationBehavior.preserve, duration: const Duration(milliseconds: 1400))..repeat(reverse: true);
+    _pulse = AnimationController(vsync: this, animationBehavior: AnimationBehavior.preserve, duration: const Duration(milliseconds: 1400));
     _wallFade = AnimationController(vsync: this, animationBehavior: AnimationBehavior.preserve, duration: const Duration(milliseconds: 2000), value: 1);
     _wallTimer = Timer.periodic(_kWallpaperInterval, (_) async {
       if (!mounted) return;
+      // Don't decode wallpapers while an app is playing in front.
+      if (WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed) return;
       final next = (_wallIndex + 1) % _kWallpapers.length;
       await precacheImage(AssetImage(_kWallpapers[next]), context);
       if (!mounted) return;
@@ -96,6 +98,7 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin, Wi
         _firstTileFocus.requestFocus();
       } else {
         _intro.forward();
+        _pulse.repeat(reverse: true);
       }
       if (!mounted) return;
       _ensureWifi();
@@ -117,6 +120,7 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin, Wi
     context.read<WeatherService>().refresh();
     Navigator.of(context).popUntil((r) => r.isFirst);
     setState(() => _welcome = true);
+    _pulse.repeat(reverse: true);
     _reveal.value = 0;
     _intro.forward(from: 0);
     _rootFocus.requestFocus();
@@ -127,6 +131,7 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin, Wi
     if (!_welcome) return;
     AmadiBridge.markWelcomeShown();
     setState(() => _welcome = false);
+    _pulse.stop();
     _reveal.forward();
     Future<void>.delayed(const Duration(milliseconds: 400), () {
       if (mounted) _firstTileFocus.requestFocus();
@@ -135,6 +140,11 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin, Wi
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    // While an app (YouTube etc.) is in front, give its memory back: this TV has ~440 MB RAM.
+    if (state == AppLifecycleState.paused) {
+      PaintingBinding.instance.imageCache.clear();
+      PaintingBinding.instance.imageCache.clearLiveImages();
+    }
     // Back on the home screen (e.g. after closing an app): re-check the guest name.
     if (state == AppLifecycleState.resumed && mounted) {
       context.read<GuestService>().refresh();
@@ -577,7 +587,9 @@ class _AppTileState extends State<_AppTile> {
       focusNode: widget.focusNode,
       onArrow: widget.onArrow,
       onActivate: () {
-        if (app != null) {
+        if (app != null && widget.slot.id == 'mx') {
+          appsService.launchApp(app);
+        } else if (app != null) {
           Navigator.of(context).push(PageRouteBuilder<void>(
             opaque: true,
             transitionDuration: const Duration(milliseconds: 250),

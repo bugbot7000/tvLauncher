@@ -26,8 +26,6 @@ import java.util.concurrent.Executors;
 public final class AmadiDeviceOwner {
     public static final String[] STREAMING_APPS = {
             "com.google.android.youtube.tv",
-            "com.netflix.ninja",
-            "com.netflix.mediaclient",
             "com.amazon.amazonvideo.livingroom",
             "in.startv.hotstar",
     };
