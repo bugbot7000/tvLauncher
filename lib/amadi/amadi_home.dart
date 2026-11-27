@@ -94,7 +94,6 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin, Wi
     });
     AmadiBridge.onScreenOn(() {
       _showWelcome();
-      _ensureWifi();
     });
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final alreadyShown = await AmadiBridge.welcomeAlreadyShownThisBoot();
@@ -125,19 +124,12 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin, Wi
               builder: (_) => AppInstallerPage(closeWhenDone: true, closeAlways: !fromScript)));
         }
       }
-      // Join the default Wi-Fi only on the first start after power-on (not when
-      // Android restarts the launcher after an app), so a network picked by hand stays.
-      if (!alreadyShown) _ensureWifi();
+      // Wi-Fi is left to Android (it auto-reconnects to saved networks). The launcher
+      // no longer forces a network on boot — that caused Amadi_Staff to flap. Use the
+      // "Connect to default network now" button in settings to switch on demand.
       final room = context.read<AmadiSettings>().roomNumber;
       if (room.isNotEmpty) AmadiBridge.setDeviceName('$room TV');
     });
-  }
-
-  Future<void> _ensureWifi() async {
-    final s = context.read<AmadiSettings>();
-    await Future<void>.delayed(const Duration(seconds: 5));
-    if (!mounted || s.wifiSsid.isEmpty) return;
-    await AmadiBridge.ensureWifi(s.wifiSsid, s.wifiPassword, s.fallbackSsid, s.fallbackPassword);
   }
 
   void _showWelcome() {
