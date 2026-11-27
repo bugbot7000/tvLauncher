@@ -699,11 +699,13 @@ class _DockState extends State<_Dock> {
       ),
       child: FocusTraversalGroup(
         policy: ReadingOrderTraversalPolicy(),
-        // Tiles keep the four-app width; fewer apps sit centred.
+        // Tiles keep the four-app width; with fewer apps (YouTube only) the dock
+        // shrinks to fit them instead of leaving an empty bar.
         child: LayoutBuilder(builder: (context, c) {
           final n = kDockSlots.length;
           final tileW = (c.maxWidth - 12 * (n - 1)) / n;
           return Row(
+            mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               for (var i = 0; i < slots.length; i++) ...[
