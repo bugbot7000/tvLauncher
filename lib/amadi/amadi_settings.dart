@@ -53,19 +53,8 @@ class AmadiSettings extends ChangeNotifier {
   double get uiZoom => double.tryParse(_s('ui_zoom', '1.0')) ?? 1.0;
   Future<void> setUiZoom(double v) => _set('ui_zoom', v.toStringAsFixed(2));
 
-  String get startVolume => _s('start_volume', '15');
+  String get startVolume => _s('start_volume', '5');
   Future<void> setStartVolume(String v) => _set('start_volume', v.trim());
-
-  /// Highest volume guests can set (enforced by the always-running service). Empty = no limit.
-  String get maxVolume => _s('max_volume', '');
-  Future<void> setMaxVolume(String v) => _set('max_volume', v.trim());
-
-  /// With a maximum volume set, the launcher draws its own volume bar (cap = full bar).
-  bool get ownVolumeBar => _prefs.getBool('amadi_own_volume_bar') ?? true;
-  Future<void> setOwnVolumeBar(bool v) async {
-    await _prefs.setBool('amadi_own_volume_bar', v);
-    notifyListeners();
-  }
 
   /// Minutes the home screen may sit untouched before the TV goes to standby. Empty = off.
   String get autoOffMinutes => _s('auto_off_minutes', '60');

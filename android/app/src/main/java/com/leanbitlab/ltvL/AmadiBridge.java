@@ -144,10 +144,6 @@ public final class AmadiBridge {
                     }).start();
                     break;
                 }
-                case "applyVolumeLimit":
-                    AmadiWifiService.enforceVolumeLimit(activity.getApplicationContext());
-                    result.success(true);
-                    break;
                 case "sleepNow": {
                     // Standby, like the power button. KEYCODE_SLEEP only ever turns the screen off.
                     new Thread(() -> {

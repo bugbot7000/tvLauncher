@@ -147,7 +147,6 @@ class AmadiSettingsPage extends StatefulWidget {
 class _AmadiSettingsPageState extends State<AmadiSettingsPage> with WidgetsBindingObserver {
   Map<String, dynamic> _owner = {};
   Map<String, String>? _net;
-  int _volumeSteps = 0;
 
   @override
   void initState() {
@@ -155,9 +154,6 @@ class _AmadiSettingsPageState extends State<AmadiSettingsPage> with WidgetsBindi
     WidgetsBinding.instance.addObserver(this);
     _loadOwner();
     _loadNetwork();
-    AmadiBridge.volumeInfo().then((v) {
-      if (mounted) setState(() => _volumeSteps = v['max'] ?? 0);
-    });
   }
 
   Future<void> _loadNetwork() async {
@@ -358,23 +354,6 @@ class _AmadiSettingsPageState extends State<AmadiSettingsPage> with WidgetsBindi
           _section('This TV'),
           _row('Volume at power-on', s.startVolume.isEmpty ? 'Off' : s.startVolume,
               () => _editText('Volume when the TV is turned on (empty = off)', s.startVolume, s.setStartVolume)),
-          _row(
-              'Maximum volume',
-              s.maxVolume.isEmpty
-                  ? 'No limit'
-                  : '${s.maxVolume}${_volumeSteps > 0 ? ' of $_volumeSteps' : ''}  ·  guests cannot go higher',
-              () => _editText(
-                  'Highest volume guests can set${_volumeSteps > 0 ? ' (0 to $_volumeSteps)' : ''}. Empty = no limit',
-                  s.maxVolume, (v) async {
-                await s.setMaxVolume(v);
-                await AmadiBridge.applyVolumeLimit();
-              }, keyboard: TextInputType.number)),
-          SwitchListTile(
-            title: const Text('Amadi volume bar'),
-            subtitle: const Text('With a maximum volume set, shows our own volume bar where the limit is a full bar. Off = the TV\'s own volume popup.'),
-            value: s.ownVolumeBar,
-            onChanged: (v) => s.setOwnVolumeBar(v),
-          ),
           _row(
               'Turn off when idle',
               s.autoOffMinutes.isEmpty

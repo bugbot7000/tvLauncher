@@ -28,7 +28,7 @@ class GuestService extends ChangeNotifier {
     // Show the last known guest straight away (the TV may restart the launcher
     // while an app is open).
     if (settings.cachedGuest.isNotEmpty && settings.cachedGuestRoom == settings.roomNumber) {
-      _guest = Guest('', settings.cachedGuest);
+      _guest = Guest('', sentenceCase(settings.cachedGuest));
     }
     refresh();
     _timer = Timer.periodic(const Duration(minutes: 15), (_) => refresh());
@@ -68,7 +68,8 @@ class GuestService extends ChangeNotifier {
       await settings.setCachedGuest(g?.name ?? '');
       await settings.setCachedGuestRoom(room);
       // New guest or checkout: sign out of the streaming apps and show them all again.
-      if (previous != null && previous != (g?.name ?? '')) {
+      // Case-insensitive, so a change in how names are capitalised isn't seen as a new guest.
+      if (previous != null && previous.toLowerCase() != (g?.name ?? '').toLowerCase()) {
         AmadiBridge.signOutNow();
         if (settings.youtubeOnly) await settings.setYoutubeOnly(false);
       }
@@ -124,10 +125,14 @@ class GuestService extends ChangeNotifier {
     return null;
   }
 
-  /// "AMAN" / "aman" -> "Aman".
+  /// Capital first letter on every word: "ARUN KUMAR" / "arun kumar" -> "Arun Kumar".
   static String sentenceCase(String s) {
-    final t = s.trim().toLowerCase();
-    return t.isEmpty ? t : t[0].toUpperCase() + t.substring(1);
+    return s
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((w) => w.isNotEmpty)
+        .map((w) => w[0].toUpperCase() + w.substring(1).toLowerCase())
+        .join(' ');
   }
 
   /// Accepts dd/mm/yyyy, dd-mm-yyyy, dd.mm.yyyy and yyyy-mm-dd.

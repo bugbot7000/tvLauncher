@@ -494,7 +494,7 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin, Wi
 
   Widget _offWarningPanel() {
     return Container(
-      color: const Color(0xCC000000),
+      color: Colors.black, // fully black: nothing of the home screen shows
       alignment: Alignment.center,
       child: Column(mainAxisSize: MainAxisSize.min, children: [
         const Icon(Icons.power_settings_new, color: Colors.white, size: 56),

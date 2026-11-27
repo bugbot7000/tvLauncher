@@ -130,23 +130,6 @@ class AmadiBridge {
     }
   }
 
-  /// Media volume: {'max': steps, 'now': current}.
-  static Future<Map<String, int>> volumeInfo() async {
-    try {
-      final m = await _channel.invokeMethod<Map<dynamic, dynamic>>('volumeInfo');
-      return (m ?? {}).map((k, v) => MapEntry('$k', (v as num?)?.toInt() ?? 0));
-    } catch (_) {
-      return {};
-    }
-  }
-
-  /// Lowers the volume right away if it is above the new limit.
-  static Future<void> applyVolumeLimit() async {
-    try {
-      await _channel.invokeMethod('applyVolumeLimit');
-    } catch (_) {}
-  }
-
   /// Puts the TV into standby (like pressing the power button).
   static Future<void> sleepNow() async {
     try {

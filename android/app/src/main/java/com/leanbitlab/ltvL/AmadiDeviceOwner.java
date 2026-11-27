@@ -63,7 +63,7 @@ public final class AmadiDeviceOwner {
         AmadiBridge.applyHostname(c);
         // No click/beep sound on every remote button press (system-wide setting).
         AmadiSelfAdb.shell(c, "settings put system sound_effects_enabled 0");
-        enableVolumeService(c);
+        removeVolumeService(c);
         if (!isOwner(c)) {
             try { setSettingsHidden(c, true); } catch (Exception ignored) {}
             return;
@@ -74,16 +74,20 @@ public final class AmadiDeviceOwner {
         // Wi-Fi is left entirely to Android: the launcher never removes, picks or forces networks.
     }
 
-    /** Turns on the launcher's volume-bar accessibility service, keeping any others already on. */
-    static void enableVolumeService(Context c) {
+    /** The volume-cap service was removed; take it off the TV's accessibility list (keeps the TV's own). */
+    static void removeVolumeService(Context c) {
         try {
+            final String me = "in.amadi.tvlauncher/com.omeda.arc.AmadiVolumeService";
             String cur = android.provider.Settings.Secure.getString(c.getContentResolver(),
                     android.provider.Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES);
-            if (cur != null && cur.contains(AmadiVolumeService.COMPONENT)) return;
-            String list = (cur == null || cur.trim().isEmpty()) ? AmadiVolumeService.COMPONENT
-                    : cur.trim() + ":" + AmadiVolumeService.COMPONENT;
-            AmadiSelfAdb.shell(c, "settings put secure enabled_accessibility_services '" + list
-                    + "'; settings put secure accessibility_enabled 1");
+            if (cur == null || !cur.contains(me)) return;
+            StringBuilder keep = new StringBuilder();
+            for (String part : cur.split(":")) {
+                if (part.isEmpty() || part.equals(me)) continue;
+                if (keep.length() > 0) keep.append(':');
+                keep.append(part);
+            }
+            AmadiSelfAdb.shell(c, "settings put secure enabled_accessibility_services '" + keep + "'");
         } catch (Exception ignored) {}
     }
 
