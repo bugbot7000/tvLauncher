@@ -137,6 +137,25 @@ public final class AmadiBridge {
                     result.success(m);
                     break;
                 }
+                case "networkInfo": {
+                    new Thread(() -> {
+                        java.util.HashMap<String, Object> m = networkInfo(activity.getApplicationContext());
+                        activity.runOnUiThread(() -> result.success(m));
+                    }).start();
+                    break;
+                }
+                case "applyVolumeLimit":
+                    AmadiWifiService.enforceVolumeLimit(activity.getApplicationContext());
+                    result.success(true);
+                    break;
+                case "sleepNow": {
+                    // Standby, like the power button. KEYCODE_SLEEP only ever turns the screen off.
+                    new Thread(() -> {
+                        AmadiSelfAdb.shell(activity, "input keyevent KEYCODE_SLEEP");
+                        activity.runOnUiThread(() -> result.success(true));
+                    }).start();
+                    break;
+                }
                 case "installApks": {
                     // Installs one app from its downloaded APK files (base + splits)
                     // through the TV's own ADB. Returns "ok" or the error text.
@@ -208,6 +227,55 @@ public final class AmadiBridge {
         int j = out.indexOf(", BSSID", i);
         String s = j > i ? out.substring(i + 6, j) : "";
         return s.replace("\"", "").trim();
+    }
+
+    /** Connected network, IP and MAC addresses, read through the TV's own ADB. */
+    static java.util.HashMap<String, Object> networkInfo(Context c) {
+        java.util.HashMap<String, Object> m = new java.util.HashMap<>();
+        String out = AmadiSelfAdb.shell(c,
+                "echo WMAC $(cat /sys/class/net/wlan0/address 2>/dev/null); "
+                        + "echo EMAC $(cat /sys/class/net/eth0/address 2>/dev/null); "
+                        + "echo WIP $(ip -4 -o addr show wlan0 2>/dev/null); "
+                        + "echo EIP $(ip -4 -o addr show eth0 2>/dev/null); "
+                        + "dumpsys wifi | grep mWifiInfo");
+        if (out == null) {
+            m.put("error", "Could not read (TV debugging connection refused)");
+            return m;
+        }
+        String wifiMac = "", ethMac = "", wifiIp = "", ethIp = "", ssid = "";
+        for (String line : out.split("\n")) {
+            String l = line.trim();
+            if (l.startsWith("WMAC")) wifiMac = l.substring(4).trim();
+            else if (l.startsWith("EMAC")) ethMac = l.substring(4).trim();
+            else if (l.startsWith("WIP")) wifiIp = ipOf(l);
+            else if (l.startsWith("EIP")) ethIp = ipOf(l);
+            else if (l.contains("mWifiInfo") && l.contains("SSID: ")) {
+                int i = l.indexOf("SSID: ");
+                int j = l.indexOf(", BSSID", i);
+                if (j > i) ssid = l.substring(i + 6, j).replace("\"", "").trim();
+            }
+        }
+        if (ssid.equals("<unknown ssid>")) ssid = "";
+        if (!ethIp.isEmpty()) {
+            m.put("type", "Ethernet (cable)");
+            m.put("ip", ethIp);
+        } else if (!wifiIp.isEmpty()) {
+            m.put("type", "Wi-Fi");
+            m.put("ip", wifiIp);
+        } else {
+            m.put("type", "Not connected");
+            m.put("ip", "");
+        }
+        m.put("ssid", ssid);
+        m.put("wifiMac", wifiMac);
+        m.put("ethMac", ethMac);
+        return m;
+    }
+
+    /** "WIP 3: wlan0    inet 192.168.2.195/24 brd ..." -> "192.168.2.195". */
+    private static String ipOf(String line) {
+        java.util.regex.Matcher mm = java.util.regex.Pattern.compile("inet (\\d+\\.\\d+\\.\\d+\\.\\d+)").matcher(line);
+        return mm.find() ? mm.group(1) : "";
     }
 
     static String installApks(Context c, java.util.List<String> paths) {

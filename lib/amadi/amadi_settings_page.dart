@@ -145,14 +145,44 @@ class AmadiSettingsPage extends StatefulWidget {
 }
 
 class _AmadiSettingsPageState extends State<AmadiSettingsPage> with WidgetsBindingObserver {
-  String? _wifiResult;
   Map<String, dynamic> _owner = {};
+  Map<String, String>? _net;
+  int _volumeSteps = 0;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _loadOwner();
+    _loadNetwork();
+    AmadiBridge.volumeInfo().then((v) {
+      if (mounted) setState(() => _volumeSteps = v['max'] ?? 0);
+    });
+  }
+
+  Future<void> _loadNetwork() async {
+    setState(() => _net = null);
+    final n = await AmadiBridge.networkInfo();
+    if (mounted) setState(() => _net = n);
+  }
+
+  String _netValue(String key, {String empty = 'Unknown'}) {
+    final n = _net;
+    if (n == null) return 'Checking…';
+    if (n['error'] != null) return n['error']!;
+    final v = n[key] ?? '';
+    return v.isEmpty ? empty : v;
+  }
+
+  String _connectedNetwork() {
+    final n = _net;
+    if (n == null) return 'Checking…';
+    if (n['error'] != null) return n['error']!;
+    final type = n['type'] ?? '';
+    final ssid = n['ssid'] ?? '';
+    if (type == 'Wi-Fi') return ssid.isEmpty ? 'Wi-Fi' : 'Wi-Fi: $ssid';
+    if (type.startsWith('Ethernet') && ssid.isNotEmpty) return '$type  ·  Wi-Fi also on $ssid';
+    return type.isEmpty ? 'Unknown' : type;
   }
 
   @override
@@ -168,6 +198,7 @@ class _AmadiSettingsPageState extends State<AmadiSettingsPage> with WidgetsBindi
     if (state == AppLifecycleState.resumed) {
       AmadiBridge.setSettingsHidden(true);
       _loadOwner();
+      _loadNetwork();
     }
   }
 
@@ -255,7 +286,7 @@ class _AmadiSettingsPageState extends State<AmadiSettingsPage> with WidgetsBindi
 
   Widget _section(String title) => Padding(
         padding: const EdgeInsets.fromLTRB(16, 20, 16, 6),
-        child: Text(title, style: const TextStyle(color: Color(0xFF9FE1CB), fontSize: 13)),
+        child: Text(title, style: const TextStyle(color: Color(0xFF9FE1CB), fontSize: 16, fontWeight: FontWeight.w500)),
       );
 
   Widget _row(String title, String value, VoidCallback onTap, {bool autofocus = false}) => ListTile(
@@ -274,7 +305,10 @@ class _AmadiSettingsPageState extends State<AmadiSettingsPage> with WidgetsBindi
     final apps = context.watch<AppsService>().applications;
     final last = guests.lastFetch;
 
-    return Scaffold(
+    // Larger text so staff can read the settings from the bed or the doorway.
+    return MediaQuery(
+      data: MediaQuery.of(context).copyWith(textScaler: const TextScaler.linear(1.3)),
+      child: Scaffold(
       backgroundColor: const Color(0xFF121212),
       appBar: AppBar(title: const Text('Hotel settings')),
       body: ListView(
@@ -324,6 +358,25 @@ class _AmadiSettingsPageState extends State<AmadiSettingsPage> with WidgetsBindi
           _section('This TV'),
           _row('Volume at power-on', s.startVolume.isEmpty ? 'Off' : s.startVolume,
               () => _editText('Volume when the TV is turned on (empty = off)', s.startVolume, s.setStartVolume)),
+          _row(
+              'Maximum volume',
+              s.maxVolume.isEmpty
+                  ? 'No limit'
+                  : '${s.maxVolume}${_volumeSteps > 0 ? ' of $_volumeSteps' : ''}  ·  guests cannot go higher',
+              () => _editText(
+                  'Highest volume guests can set${_volumeSteps > 0 ? ' (0 to $_volumeSteps)' : ''}. Empty = no limit',
+                  s.maxVolume, (v) async {
+                await s.setMaxVolume(v);
+                await AmadiBridge.applyVolumeLimit();
+              }, keyboard: TextInputType.number)),
+          _row(
+              'Turn off when idle',
+              s.autoOffMinutes.isEmpty
+                  ? 'Off'
+                  : 'After ${s.autoOffMinutes} minutes on the home screen with no button pressed',
+              () => _editText('Minutes on the home screen before the TV turns off (empty = never)', s.autoOffMinutes,
+                  s.setAutoOffMinutes,
+                  keyboard: TextInputType.number)),
           _row('Display zoom', '${(s.uiZoom * 100).round()}%', () {
             // Cycle 100 -> 115 -> 130 -> 145 -> 100 for low-resolution panels.
             const steps = [1.0, 1.15, 1.3, 1.45];
@@ -339,28 +392,11 @@ class _AmadiSettingsPageState extends State<AmadiSettingsPage> with WidgetsBindi
             () => guests.refresh(),
           ),
 
-          _section('Wi-Fi'),
-          _row('Default network', s.wifiSsid, () => _editText('Wi-Fi network name', s.wifiSsid, s.setWifiSsid)),
-          _row('Default network password', s.wifiPassword.isEmpty ? 'None (open network)' : '••••••••',
-              () => _editText('Wi-Fi password', s.wifiPassword, s.setWifiPassword, obscure: true)),
-          _row('Fallback network', s.fallbackSsid, () => _editText('Fallback Wi-Fi name', s.fallbackSsid, s.setFallbackSsid)),
-          _row('Fallback network password', s.fallbackPassword.isEmpty ? 'None (open network)' : '••••••••',
-              () => _editText('Fallback Wi-Fi password', s.fallbackPassword, s.setFallbackPassword, obscure: true)),
-          _row('Connect to default network now', _wifiResult ?? '', () async {
-            setState(() => _wifiResult = 'Connecting… (up to 30 seconds)');
-            final r = await AmadiBridge.ensureWifi(s.wifiSsid, s.wifiPassword, s.fallbackSsid, s.fallbackPassword);
-            setState(() => _wifiResult = switch (r) {
-                  'connected-request' => 'Connecting…',
-                  'already' => 'Connected to ${s.wifiSsid}',
-                  'staff' => 'Connected to ${s.wifiSsid}',
-                  'fallback' => 'Connected to ${s.fallbackSsid} (fallback)',
-                  'failed' => 'Could not connect. Check the network names and passwords.',
-                  'suggested' => 'Sent to Android. Accept the prompt if one appears.',
-                  'disabled' => 'Wi-Fi is off. Turn it on in Wi-Fi settings.',
-                  'invalid' => 'Set a network name first.',
-                  _ => r,
-                });
-          }),
+          _section('Network'),
+          _row('Connected network', _connectedNetwork(), _loadNetwork),
+          _row('IP address', _netValue('ip', empty: 'None'), _loadNetwork),
+          _row('Wi-Fi MAC address', _netValue('wifiMac'), _loadNetwork),
+          _row('Ethernet MAC address', _netValue('ethMac', empty: 'None'), _loadNetwork),
           _row('Open Wi-Fi settings', '', () => _openSystem(() => _channel.openWifiSettings())),
 
           _section('Date and time'),
@@ -376,7 +412,6 @@ class _AmadiSettingsPageState extends State<AmadiSettingsPage> with WidgetsBindi
               () => _editText('Checkout time (HH:MM, 24h)', s.checkoutTime, s.setCheckoutTime)),
 
           _section('Weather'),
-          _row('Place name', s.weatherPlace, () => _editText('Place name', s.weatherPlace, s.setWeatherPlace)),
           _row('Location (latitude, longitude)', '${s.weatherLat}, ${s.weatherLon}', () async {
             await _editText('Latitude, longitude', '${s.weatherLat}, ${s.weatherLon}', (v) async {
               final parts = v.split(',');
@@ -424,6 +459,7 @@ class _AmadiSettingsPageState extends State<AmadiSettingsPage> with WidgetsBindi
           ),
           const SizedBox(height: 24),
         ],
+      ),
       ),
     );
   }

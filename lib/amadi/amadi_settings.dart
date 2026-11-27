@@ -56,6 +56,14 @@ class AmadiSettings extends ChangeNotifier {
   String get startVolume => _s('start_volume', '15');
   Future<void> setStartVolume(String v) => _set('start_volume', v.trim());
 
+  /// Highest volume guests can set (enforced by the always-running service). Empty = no limit.
+  String get maxVolume => _s('max_volume', '');
+  Future<void> setMaxVolume(String v) => _set('max_volume', v.trim());
+
+  /// Minutes the home screen may sit untouched before the TV goes to standby. Empty = off.
+  String get autoOffMinutes => _s('auto_off_minutes', '60');
+  Future<void> setAutoOffMinutes(String v) => _set('auto_off_minutes', v.trim());
+
   String get roomNumber => _s('room', '');
   Future<void> setRoomNumber(String v) async {
     await _set('room', v.trim());

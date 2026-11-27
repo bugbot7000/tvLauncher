@@ -1,7 +1,7 @@
 /*
  * Amadi additions to Arc Launcher (GPL-3.0-or-later).
  * Device-owner powers: daily sign-out of streaming apps, permanent home screen,
- * Wi-Fi lock to the staff network, hiding the Android settings app from guests.
+ * hiding the Android settings app from guests.
  */
 package com.omeda.arc;
 
@@ -61,6 +61,8 @@ public final class AmadiDeviceOwner {
         try { cancelDailySignOut(c); } catch (Exception ignored) {}
         AmadiWifiService.start(c);
         AmadiBridge.applyHostname(c);
+        // No click/beep sound on every remote button press (system-wide setting).
+        AmadiSelfAdb.shell(c, "settings put system sound_effects_enabled 0");
         if (!isOwner(c)) {
             try { setSettingsHidden(c, true); } catch (Exception ignored) {}
             return;
@@ -68,7 +70,7 @@ public final class AmadiDeviceOwner {
         try { grantSelf(c); } catch (Exception ignored) {}
         try { lockHome(c); } catch (Exception ignored) {}
         try { setSettingsHidden(c, true); } catch (Exception ignored) {}
-        try { lockWifi(c); } catch (Exception ignored) {}
+        // Wi-Fi is left entirely to Android: the launcher never removes, picks or forces networks.
     }
 
     static void cancelDailySignOut(Context c) {
@@ -104,30 +106,6 @@ public final class AmadiDeviceOwner {
             dpm(c).setApplicationHidden(admin(c), TV_SETTINGS, hidden);
         } else {
             AmadiSelfAdb.shell(c, hidden ? "pm disable-user --user 0 " + TV_SETTINGS : "pm enable " + TV_SETTINGS);
-        }
-    }
-
-    /** Forgets every saved network except the staff network and connects to it. */
-    @SuppressLint("MissingPermission")
-    @SuppressWarnings("deprecation")
-    static void lockWifi(Context c) {
-        WifiManager wm = (WifiManager) c.getApplicationContext().getSystemService(Context.WIFI_SERVICE);
-        if (wm == null) return;
-        if (!wm.isWifiEnabled()) wm.setWifiEnabled(true);
-        List<WifiConfiguration> list = wm.getConfiguredNetworks();
-        if (list == null) return;
-        int staffId = -1;
-        for (WifiConfiguration w : list) {
-            if (("\"" + STAFF_SSID + "\"").equals(w.SSID)) staffId = w.networkId;
-        }
-        if (staffId == -1) return; // never remove networks if the staff one is missing
-        for (WifiConfiguration w : list) {
-            if (w.networkId != staffId) wm.removeNetwork(w.networkId);
-        }
-        wm.saveConfiguration();
-        if (wm.getConnectionInfo() == null || wm.getConnectionInfo().getNetworkId() != staffId) {
-            wm.enableNetwork(staffId, true);
-            wm.reconnect();
         }
     }
 

@@ -64,6 +64,14 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin, Wi
   final FocusNode _firstTileFocus = FocusNode(debugLabel: 'amadi-dock-0');
   Timer? _clock;
   DateTime _now = DateTime.now();
+  /// Clock digits count up from 00:00 to the time as the home screen appears.
+  late final AnimationController _countUp;
+  // Turn off when idle: time of the last remote button press on the home screen.
+  DateTime _lastInput = DateTime.now();
+  Timer? _idleCheck;
+  Timer? _offTimer;
+  bool _offWarning = false;
+  int _offCountdown = 60;
 
   @override
   void initState() {
@@ -73,6 +81,9 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin, Wi
     _intro = AnimationController(vsync: this, animationBehavior: AnimationBehavior.preserve, duration: const Duration(milliseconds: 1100));
     _pulse = AnimationController(vsync: this, animationBehavior: AnimationBehavior.preserve, duration: const Duration(milliseconds: 1400));
     _wallFade = AnimationController(vsync: this, animationBehavior: AnimationBehavior.preserve, duration: const Duration(milliseconds: 2000), value: 1);
+    _countUp = AnimationController(vsync: this, animationBehavior: AnimationBehavior.preserve, duration: const Duration(milliseconds: 1500));
+    HardwareKeyboard.instance.addHandler(_onAnyKey);
+    _idleCheck = Timer.periodic(const Duration(seconds: 20), (_) => _checkIdle());
     _wallTimer = Timer.periodic(_kWallpaperInterval, (_) async {
       if (!mounted) return;
       // Don't decode wallpapers while an app is playing in front.
@@ -101,6 +112,7 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin, Wi
         setState(() => _welcome = false);
         _reveal.value = 1;
         _intro.value = 1;
+        _countUp.value = 1;
         _firstTileFocus.requestFocus();
       } else {
         _intro.forward();
@@ -138,8 +150,10 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin, Wi
     context.read<WeatherService>().refresh();
     Navigator.of(context).popUntil((r) => r.isFirst);
     setState(() => _welcome = true);
+    _lastInput = DateTime.now();
     _pulse.repeat(reverse: true);
     _reveal.value = 0;
+    _countUp.value = 0;
     _intro.forward(from: 0);
     _rootFocus.requestFocus();
   }
@@ -150,20 +164,75 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin, Wi
     setState(() => _welcome = false);
     _pulse.stop();
     _reveal.forward();
+    // Start counting as the clock begins to glide in.
+    Future<void>.delayed(const Duration(milliseconds: 450), () {
+      if (mounted) _countUp.forward(from: 0);
+    });
     Future<void>.delayed(const Duration(milliseconds: 400), () {
       if (mounted) _firstTileFocus.requestFocus();
     });
+  }
+
+  /// Any remote button counts as someone using the TV.
+  bool _onAnyKey(KeyEvent event) {
+    _lastInput = DateTime.now();
+    if (_offWarning) {
+      _cancelOffWarning();
+      return true; // this press only keeps the TV on
+    }
+    return false;
+  }
+
+  /// After the set minutes on the home screen with no button pressed, warn for a
+  /// minute, then put the TV in standby. Time spent in other apps doesn't count.
+  void _checkIdle() {
+    if (!mounted || _offWarning) return;
+    if (WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed) {
+      _lastInput = DateTime.now();
+      return;
+    }
+    final minutes = int.tryParse(context.read<AmadiSettings>().autoOffMinutes);
+    if (minutes == null || minutes <= 0) return;
+    final warnSeconds = minutes * 60 - 60;
+    final warnAt = Duration(seconds: warnSeconds < 0 ? 0 : warnSeconds);
+    if (DateTime.now().difference(_lastInput) < warnAt) return;
+    setState(() {
+      _offWarning = true;
+      _offCountdown = 60;
+    });
+    _offTimer?.cancel();
+    _offTimer = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (!mounted) {
+        t.cancel();
+        return;
+      }
+      if (_offCountdown <= 1) {
+        t.cancel();
+        setState(() => _offWarning = false);
+        _lastInput = DateTime.now();
+        AmadiBridge.sleepNow();
+        return;
+      }
+      setState(() => _offCountdown--);
+    });
+  }
+
+  void _cancelOffWarning() {
+    _offTimer?.cancel();
+    if (mounted && _offWarning) setState(() => _offWarning = false);
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     // While an app (YouTube etc.) is in front, give its memory back: this TV has ~440 MB RAM.
     if (state == AppLifecycleState.paused) {
+      _cancelOffWarning();
       PaintingBinding.instance.imageCache.clear();
       PaintingBinding.instance.imageCache.clearLiveImages();
     }
     // Back on the home screen (e.g. after closing an app): re-check the guest name.
     if (state == AppLifecycleState.resumed && mounted) {
+      _lastInput = DateTime.now();
       context.read<GuestService>().refresh();
       context.read<TickerService>().refresh();
     }
@@ -172,6 +241,10 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin, Wi
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    HardwareKeyboard.instance.removeHandler(_onAnyKey);
+    _idleCheck?.cancel();
+    _offTimer?.cancel();
+    _countUp.dispose();
     _clock?.cancel();
     _reveal.dispose();
     _intro.dispose();
@@ -210,7 +283,7 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin, Wi
             body: DefaultTextStyle.merge(
               style: const TextStyle(fontFamily: 'Roboto'),
               child: _zoomed(settings.uiZoom, AnimatedBuilder(
-              animation: Listenable.merge([_reveal, _intro, _wallFade]),
+              animation: Listenable.merge([_reveal, _intro, _wallFade, _countUp]),
               builder: (context, _) {
                 final t = Curves.easeInOutCubic.transform(_reveal.value);
                 return Stack(
@@ -239,6 +312,7 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin, Wi
                           ),
                         )),
                       ),
+                    if (_offWarning) _offWarningPanel(),
                   ],
                 );
               },
@@ -319,7 +393,8 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin, Wi
       if (room.isNotEmpty && t > 0) {
         lines.add(Opacity(
             opacity: t,
-            child: Text('Room $room', style: TextStyle(color: Colors.white, fontSize: 13, shadows: shadows))));
+            child: Text('Room $room',
+                style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w600, height: 1.4, shadows: shadows))));
       }
     } else {
       if (t < 1) {
@@ -334,7 +409,7 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin, Wi
         lines.add(Opacity(
             opacity: t,
             child: Text('Room $room',
-                style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w500, shadows: shadows))));
+                style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w600, shadows: shadows))));
       }
     }
     if (lines.isEmpty) return const SizedBox.shrink();
@@ -417,13 +492,53 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin, Wi
     );
   }
 
+  Widget _offWarningPanel() {
+    return Container(
+      color: const Color(0xCC000000),
+      alignment: Alignment.center,
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        const Icon(Icons.power_settings_new, color: Colors.white, size: 56),
+        const SizedBox(height: 18),
+        Text('This TV will turn off in $_offCountdown seconds',
+            style: const TextStyle(color: Colors.white, fontSize: 30, fontWeight: FontWeight.w500)),
+        const SizedBox(height: 10),
+        const Text('Press any button to keep it on', style: TextStyle(color: _kMint, fontSize: 20)),
+      ]),
+    );
+  }
+
+  /// "hh:mm" counting up from 00:00 while the clock appears, then the real time.
+  Widget _clockText() {
+    const style = TextStyle(
+        fontFamily: 'Roboto',
+        color: Colors.white,
+        fontSize: 46,
+        fontWeight: FontWeight.w500,
+        height: 1,
+        shadows: _kShadow,
+        fontFeatures: [ui.FontFeature.tabularFigures()]);
+    final v = Curves.easeOutCubic.transform(_countUp.value);
+    final h12 = _now.hour % 12 == 0 ? 12 : _now.hour % 12;
+    final h = (h12 * v).round();
+    final m = (_now.minute * v).round();
+    String two(int n) => n.toString().padLeft(2, '0');
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.baseline,
+      textBaseline: TextBaseline.alphabetic,
+      children: [
+        Text('${two(h)}:${two(m)}', style: style),
+        Opacity(opacity: v, child: Text(' ${DateFormat('a').format(_now)}', style: style)),
+      ],
+    );
+  }
+
   Widget _clockAndWeather(bool online, WeatherService weather, String place) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(DateFormat('h:mm a').format(_now),
-            style: const TextStyle(fontFamily: 'Roboto', color: Colors.white, fontSize: 46, fontWeight: FontWeight.w500, height: 1, shadows: _kShadow)),
+        _clockText(),
         const SizedBox(height: 6),
         Row(mainAxisSize: MainAxisSize.min, children: [
           Text(DateFormat('EEEE, d MMMM').format(_now), style: const TextStyle(color: Colors.white, fontSize: 14, shadows: _kShadow)),
@@ -439,7 +554,8 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin, Wi
             Text('${weather.tempC}°C',
                 style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w500, shadows: _kShadow)),
             const SizedBox(width: 8),
-            Text([weather.description, place].where((s) => s.isNotEmpty).join(' · '),
+            // No place name: guests know they're in Goa.
+            Text(weather.description,
                 style: const TextStyle(color: Colors.white, fontSize: 12, shadows: _kShadow)),
           ]),
         ],
