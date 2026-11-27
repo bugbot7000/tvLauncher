@@ -369,6 +369,12 @@ class _AmadiSettingsPageState extends State<AmadiSettingsPage> with WidgetsBindi
                 await s.setMaxVolume(v);
                 await AmadiBridge.applyVolumeLimit();
               }, keyboard: TextInputType.number)),
+          SwitchListTile(
+            title: const Text('Amadi volume bar'),
+            subtitle: const Text('With a maximum volume set, shows our own volume bar where the limit is a full bar. Off = the TV\'s own volume popup.'),
+            value: s.ownVolumeBar,
+            onChanged: (v) => s.setOwnVolumeBar(v),
+          ),
           _row(
               'Turn off when idle',
               s.autoOffMinutes.isEmpty

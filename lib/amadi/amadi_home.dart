@@ -381,28 +381,10 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin, Wi
         ? [for (final sh in _kShadow) Shadow(color: sh.color.withOpacity(sh.color.opacity * t), blurRadius: sh.blurRadius, offset: sh.offset)]
         : const <Shadow>[];
 
-    // Time-of-day greeting: rises in just after the name on the power-on welcome.
-    final greetT = Curves.easeOutCubic.transform(((_intro.value - 0.35) / 0.65).clamp(0.0, 1.0));
-    Widget greetingLine(double size) => Opacity(
-          opacity: greetT,
-          child: Transform.translate(
-            offset: Offset(0, 10 * (1 - greetT)),
-            child: Text(_timeGreeting(),
-                style: TextStyle(
-                    fontFamily: _kSerif,
-                    fontStyle: FontStyle.italic,
-                    color: Colors.white,
-                    fontSize: size,
-                    height: 1.3,
-                    shadows: shadows)),
-          ),
-        );
-
     final lines = <Widget>[];
     if (guest != null) {
       lines.add(Text('Dear ${guest.name},',
           style: TextStyle(fontFamily: _kSerif, color: Colors.white, fontSize: 30, fontWeight: FontWeight.w500, height: 1.15, shadows: shadows)));
-      lines.add(greetingLine(22));
       // Half the name size, always one line (shrinks to fit rather than wrap or cut).
       lines.add(FittedBox(
           fit: BoxFit.scaleDown,
@@ -415,7 +397,6 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin, Wi
                 style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w600, height: 1.4, shadows: shadows))));
       }
     } else {
-      lines.add(greetingLine(24));
       if (t < 1) {
         lines.add(Opacity(
           opacity: 1 - t,
@@ -463,14 +444,6 @@ class _AmadiHomeState extends State<AmadiHome> with TickerProviderStateMixin, Wi
         ),
       ),
     );
-  }
-
-  /// "Good morning" until noon, "Good afternoon" until 5 PM, then "Good evening".
-  String _timeGreeting() {
-    final h = _now.hour;
-    if (h >= 4 && h < 12) return 'Good morning';
-    if (h >= 12 && h < 17) return 'Good afternoon';
-    return 'Good evening';
   }
 
   /// [r] runs 0 to 1 as the welcome panel is dismissed: the clock block glides in

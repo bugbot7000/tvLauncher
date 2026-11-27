@@ -60,6 +60,13 @@ class AmadiSettings extends ChangeNotifier {
   String get maxVolume => _s('max_volume', '');
   Future<void> setMaxVolume(String v) => _set('max_volume', v.trim());
 
+  /// With a maximum volume set, the launcher draws its own volume bar (cap = full bar).
+  bool get ownVolumeBar => _prefs.getBool('amadi_own_volume_bar') ?? true;
+  Future<void> setOwnVolumeBar(bool v) async {
+    await _prefs.setBool('amadi_own_volume_bar', v);
+    notifyListeners();
+  }
+
   /// Minutes the home screen may sit untouched before the TV goes to standby. Empty = off.
   String get autoOffMinutes => _s('auto_off_minutes', '60');
   Future<void> setAutoOffMinutes(String v) => _set('auto_off_minutes', v.trim());

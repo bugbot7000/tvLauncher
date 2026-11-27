@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="amadi_volume_service_desc">Amadi TV volume bar: keeps the volume under the hotel\'s limit and shows the limit as a full bar.</string>
+</resources>

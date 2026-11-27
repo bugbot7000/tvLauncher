@@ -63,6 +63,7 @@ public final class AmadiDeviceOwner {
         AmadiBridge.applyHostname(c);
         // No click/beep sound on every remote button press (system-wide setting).
         AmadiSelfAdb.shell(c, "settings put system sound_effects_enabled 0");
+        enableVolumeService(c);
         if (!isOwner(c)) {
             try { setSettingsHidden(c, true); } catch (Exception ignored) {}
             return;
@@ -71,6 +72,19 @@ public final class AmadiDeviceOwner {
         try { lockHome(c); } catch (Exception ignored) {}
         try { setSettingsHidden(c, true); } catch (Exception ignored) {}
         // Wi-Fi is left entirely to Android: the launcher never removes, picks or forces networks.
+    }
+
+    /** Turns on the launcher's volume-bar accessibility service, keeping any others already on. */
+    static void enableVolumeService(Context c) {
+        try {
+            String cur = android.provider.Settings.Secure.getString(c.getContentResolver(),
+                    android.provider.Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES);
+            if (cur != null && cur.contains(AmadiVolumeService.COMPONENT)) return;
+            String list = (cur == null || cur.trim().isEmpty()) ? AmadiVolumeService.COMPONENT
+                    : cur.trim() + ":" + AmadiVolumeService.COMPONENT;
+            AmadiSelfAdb.shell(c, "settings put secure enabled_accessibility_services '" + list
+                    + "'; settings put secure accessibility_enabled 1");
+        } catch (Exception ignored) {}
     }
 
     static void cancelDailySignOut(Context c) {

@@ -146,6 +146,19 @@
             android:process=":wifi"
             android:exported="false" />
 
+        <service
+            android:name=".AmadiVolumeService"
+            android:label="Amadi TV volume"
+            android:exported="true"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/amadi_volume_service" />
+        </service>
+
         <receiver
             android:name=".AmadiSetupReceiver"
             android:exported="true"
