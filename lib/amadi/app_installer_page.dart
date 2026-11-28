@@ -114,17 +114,21 @@ class _AppInstallerPageState extends State<AppInstallerPage> {
         for (var i = 0; i < total; i++) {
           final f = job.files[i];
           final out = File('${dir.path}/${f['name']}');
+          if (mounted && job.status == 'Waiting') {
+            setState(() => job.status = 'Downloading ${job.label}: 0.00%');
+          }
           await _withRetry(() => _download(driveDownloadUrl(f['id'] as String), out, (p) {
                 if (mounted) {
                   setState(() {
-                    job.status = 'Downloading';
+                    final pct = (i + p) / total * 100;
+                    job.status = 'Downloading ${job.label}: ${pct.toStringAsFixed(2)}%';
                     job.progress = (i + p) / total * 0.9;
                   });
                 }
               }));
           paths.add(out.path);
         }
-        setState(() => job.status = 'Installing');
+        setState(() => job.status = 'Installing ${job.label}…');
         final r = await AmadiBridge.installApks(paths);
         setState(() {
           job.failed = r != 'ok';
@@ -241,7 +245,7 @@ class _AppInstallerPageState extends State<AppInstallerPage> {
                   ),
                   const SizedBox(width: 16),
                   SizedBox(
-                      width: 260,
+                      width: 320,
                       child: Text(j.status,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
