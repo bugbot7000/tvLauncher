@@ -3,6 +3,7 @@
  * Lets the setup script set the room number and start the app installer:
  *   am broadcast -f 32 -n in.amadi.tvlauncher/com.omeda.arc.AmadiSetupReceiver --es room 207 --ez setup true
  * and to update the launcher right away (from a Mac):  ... --ez update true
+ * and on CVTE (Onwa) TVs, set Power Mode to Bootup:     ... --ez poweron true
  * Protected by the DUMP permission, which only the ADB shell (not apps) holds.
  */
 package com.omeda.arc;
@@ -25,6 +26,7 @@ public class AmadiSetupReceiver extends BroadcastReceiver {
         if (intent.getBooleanExtra("setup", false)) e.putString("flutter.amadi_run_setup", "1");
         e.commit();
         if (intent.getBooleanExtra("update", false)) AmadiUpdater.checkAsync(context, true);
+        if (intent.getBooleanExtra("poweron", false)) AmadiCvtePower.applyAsync(context);
         setResultData("ok");
     }
 }

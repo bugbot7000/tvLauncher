@@ -80,6 +80,8 @@ public class AmadiWifiService extends Service {
         // Started at boot: check for a launcher update (after a moment for Wi-Fi to connect).
         new android.os.Handler(android.os.Looper.getMainLooper())
                 .postDelayed(() -> AmadiUpdater.checkAsync(AmadiWifiService.this, true), 45 * 1000L);
+        // CVTE (Onwa) TVs: make sure the TV powers on when mains power returns.
+        AmadiCvtePower.applyAsync(this);
     }
 
     @Override
