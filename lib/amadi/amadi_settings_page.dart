@@ -171,6 +171,7 @@ class _AmadiSettingsPageState extends State<AmadiSettingsPage> with WidgetsBindi
     return result.isEmpty ? '$head\nUpdates install automatically when the TV is off' : '$head\n$result';
   }
 
+  Future<void> _loadNetwork() async {
     setState(() => _net = null);
     final n = await AmadiBridge.networkInfo();
     if (mounted) setState(() => _net = n);
