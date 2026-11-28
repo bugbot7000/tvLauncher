@@ -19,6 +19,14 @@ import android.os.IBinder;
 public class AmadiWifiService extends Service {
     private WifiManager.WifiLock lock;
     private android.content.BroadcastReceiver screenOn;
+    private android.content.BroadcastReceiver screenOff;
+    private final android.os.Handler updateHandler = new android.os.Handler(android.os.Looper.getMainLooper());
+    private final Runnable hourlyUpdate = new Runnable() {
+        @Override public void run() {
+            AmadiUpdater.checkAsync(AmadiWifiService.this, false);
+            updateHandler.postDelayed(this, 60 * 60 * 1000L);
+        }
+    };
 
     /**
      * Sets the TV volume to the "volume at power-on" setting (default 5), so a guest
@@ -74,6 +82,12 @@ public class AmadiWifiService extends Service {
             @Override public void onReceive(Context c, Intent i) { applyStartVolume(c); }
         };
         registerReceiver(screenOn, new android.content.IntentFilter(Intent.ACTION_SCREEN_ON));
+        // Launcher updates: check every hour; a ready update installs once the screen is off.
+        screenOff = new android.content.BroadcastReceiver() {
+            @Override public void onReceive(Context c, Intent i) { AmadiUpdater.checkAsync(c, false); }
+        };
+        registerReceiver(screenOff, new android.content.IntentFilter(Intent.ACTION_SCREEN_OFF));
+        updateHandler.postDelayed(hourlyUpdate, 2 * 60 * 1000L); // first check 2 min after start
     }
 
     @Override
@@ -84,6 +98,8 @@ public class AmadiWifiService extends Service {
     @Override
     public void onDestroy() {
         if (screenOn != null) try { unregisterReceiver(screenOn); } catch (Throwable ignored) {}
+        if (screenOff != null) try { unregisterReceiver(screenOff); } catch (Throwable ignored) {}
+        updateHandler.removeCallbacks(hourlyUpdate);
         if (lock != null && lock.isHeld()) lock.release();
         super.onDestroy();
     }

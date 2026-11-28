@@ -147,6 +147,7 @@ class AmadiSettingsPage extends StatefulWidget {
 class _AmadiSettingsPageState extends State<AmadiSettingsPage> with WidgetsBindingObserver {
   Map<String, dynamic> _owner = {};
   Map<String, String>? _net;
+  Map<String, dynamic> _update = {};
 
   @override
   void initState() {
@@ -154,9 +155,22 @@ class _AmadiSettingsPageState extends State<AmadiSettingsPage> with WidgetsBindi
     WidgetsBinding.instance.addObserver(this);
     _loadOwner();
     _loadNetwork();
+    _loadUpdate();
   }
 
-  Future<void> _loadNetwork() async {
+  Future<void> _loadUpdate() async {
+    final u = await AmadiBridge.updateStatus();
+    if (mounted) setState(() => _update = u);
+  }
+
+  String _updateSummary() {
+    final installed = _update['installed'] ?? 0;
+    final latest = _update['latest'] ?? 0;
+    final result = '${_update['result'] ?? ''}';
+    final head = 'This TV: build $installed${latest is int && latest > 0 ? '  ·  latest released: $latest' : ''}';
+    return result.isEmpty ? '$head\nUpdates install automatically when the TV is off' : '$head\n$result';
+  }
+
     setState(() => _net = null);
     final n = await AmadiBridge.networkInfo();
     if (mounted) setState(() => _net = n);
@@ -417,6 +431,15 @@ class _AmadiSettingsPageState extends State<AmadiSettingsPage> with WidgetsBindi
               () => _channel.launchActivityFromAction('android.settings.HOME_SETTINGS')),
           _row('Open Android settings', '', () => _openSystem(() => _channel.openSettings())),
           // "Remove device owner" is deliberately not offered here: removing it can only be done over ADB.
+          _section('Updates'),
+          _row('Launcher updates', _updateSummary(), () async {
+            ScaffoldMessenger.of(context)
+                .showSnackBar(const SnackBar(content: Text('Checking for a new build… the launcher restarts if it updates.')));
+            final r = await AmadiBridge.updateNow();
+            if (!mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(r)));
+            _loadUpdate();
+          }),
           _section('About'),
           ListTile(
             title: const Text('Amadi TV launcher version'),

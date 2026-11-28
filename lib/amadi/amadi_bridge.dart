@@ -130,6 +130,25 @@ class AmadiBridge {
     }
   }
 
+  /// Launcher updates: {'installed': build, 'latest': build, 'lastCheck': ms, 'result': text}.
+  static Future<Map<String, dynamic>> updateStatus() async {
+    try {
+      final m = await _channel.invokeMethod<Map<dynamic, dynamic>>('updateStatus');
+      return (m ?? {}).map((k, v) => MapEntry('$k', v));
+    } catch (_) {
+      return {};
+    }
+  }
+
+  /// Checks for a released build and installs it now (the launcher restarts).
+  static Future<String> updateNow() async {
+    try {
+      return await _channel.invokeMethod<String>('updateNow') ?? '';
+    } catch (e) {
+      return 'Failed: $e';
+    }
+  }
+
   /// Puts the TV into standby (like pressing the power button).
   static Future<void> sleepNow() async {
     try {

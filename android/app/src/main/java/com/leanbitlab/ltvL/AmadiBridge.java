@@ -144,6 +144,16 @@ public final class AmadiBridge {
                     }).start();
                     break;
                 }
+                case "updateStatus":
+                    result.success(AmadiUpdater.status(activity.getApplicationContext()));
+                    break;
+                case "updateNow": {
+                    new Thread(() -> {
+                        String r = AmadiUpdater.check(activity.getApplicationContext(), true);
+                        activity.runOnUiThread(() -> result.success(r));
+                    }).start();
+                    break;
+                }
                 case "sleepNow": {
                     // Standby, like the power button. KEYCODE_SLEEP only ever turns the screen off.
                     new Thread(() -> {

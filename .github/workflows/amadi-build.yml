@@ -3,6 +3,7 @@ name: Amadi TV build
 on:
   push:
     branches: [amadi]
+    paths-ignore: ['amadi-release.json']
   workflow_dispatch:
 
 permissions:

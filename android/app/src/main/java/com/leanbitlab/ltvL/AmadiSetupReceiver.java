@@ -2,6 +2,7 @@
  * Amadi additions to Arc Launcher (GPL-3.0-or-later).
  * Lets the setup script set the room number and start the app installer:
  *   am broadcast -f 32 -n in.amadi.tvlauncher/com.omeda.arc.AmadiSetupReceiver --es room 207 --ez setup true
+ * and to update the launcher right away (from a Mac):  ... --ez update true
  * Protected by the DUMP permission, which only the ADB shell (not apps) holds.
  */
 package com.omeda.arc;
@@ -23,6 +24,7 @@ public class AmadiSetupReceiver extends BroadcastReceiver {
         if (zoom != null && !zoom.trim().isEmpty()) e.putString("flutter.amadi_ui_zoom", zoom.trim());
         if (intent.getBooleanExtra("setup", false)) e.putString("flutter.amadi_run_setup", "1");
         e.commit();
+        if (intent.getBooleanExtra("update", false)) AmadiUpdater.checkAsync(context, true);
         setResultData("ok");
     }
 }

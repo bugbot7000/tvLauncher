@@ -940,7 +940,7 @@ class _PrivacySplashState extends State<_PrivacySplash> with SingleTickerProvide
                   style: const TextStyle(color: _kText, fontSize: 44, fontWeight: FontWeight.w600)),
               const SizedBox(height: 22),
               const Text(
-                "Sign in with your own account to watch. For your privacy, you'll be signed out automatically after checkout.",
+                "Watch your favourite content by signing in to your account. For your privacy, you'll be signed out automatically on your checkout date.",
                 textAlign: TextAlign.center,
                 style: TextStyle(color: _kMint, fontSize: 28, height: 1.45),
               ),
