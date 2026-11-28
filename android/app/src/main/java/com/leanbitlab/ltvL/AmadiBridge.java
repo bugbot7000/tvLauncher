@@ -155,9 +155,15 @@ public final class AmadiBridge {
                     break;
                 }
                 case "sleepNow": {
-                    // Standby, like the power button. KEYCODE_SLEEP only ever turns the screen off.
+                    // Standby, exactly like the remote's power button. KEYCODE_SLEEP is
+                    // ignored on some TVs (Onwa/CVTE). POWER is a toggle, so only press it
+                    // while the screen is on, or it would turn a sleeping TV back on.
                     new Thread(() -> {
-                        AmadiSelfAdb.shell(activity, "input keyevent KEYCODE_SLEEP");
+                        android.os.PowerManager pm = (android.os.PowerManager)
+                                activity.getSystemService(android.content.Context.POWER_SERVICE);
+                        if (pm == null || pm.isInteractive()) {
+                            AmadiSelfAdb.shell(activity, "input keyevent KEYCODE_POWER");
+                        }
                         activity.runOnUiThread(() -> result.success(true));
                     }).start();
                     break;
