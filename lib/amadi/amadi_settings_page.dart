@@ -416,25 +416,7 @@ class _AmadiSettingsPageState extends State<AmadiSettingsPage> with WidgetsBindi
           _row('Make this the default home screen', '',
               () => _channel.launchActivityFromAction('android.settings.HOME_SETTINGS')),
           _row('Open Android settings', '', () => _openSystem(() => _channel.openSettings())),
-          _section('Maintenance'),
-          _row('Remove device owner (maintenance only)',
-              'Turns off daily sign-out, home lock and settings hiding', () async {
-            final ok = await showDialog<bool>(
-              context: context,
-              builder: (ctx) => AlertDialog(
-                title: const Text('Remove device owner?'),
-                content: const Text('Daily sign-out, the home screen lock and hiding of Android settings will stop until it is set up again over ADB.'),
-                actions: [
-                  TextButton(autofocus: true, onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancel')),
-                  TextButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text('Remove')),
-                ],
-              ),
-            );
-            if (ok == true) {
-              await AmadiBridge.removeOwner();
-              await _loadOwner();
-            }
-          }),
+          // "Remove device owner" is deliberately not offered here: removing it can only be done over ADB.
           _section('About'),
           ListTile(
             title: const Text('Amadi TV launcher version'),

@@ -919,29 +919,30 @@ class _PrivacySplashState extends State<_PrivacySplash> with SingleTickerProvide
         backgroundColor: _kTeal,
         body: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 620),
+            constraints: const BoxConstraints(maxWidth: 760),
             child: Column(mainAxisSize: MainAxisSize.min, children: [
               SizedBox(
-                width: 64,
-                height: 64,
+                width: 84,
+                height: 84,
                 child: AnimatedBuilder(
                   animation: _progress,
                   builder: (_, __) => CircularProgressIndicator(
                     value: _progress.value,
-                    strokeWidth: 5,
+                    strokeWidth: 6,
                     color: _kMint,
                     backgroundColor: Colors.white12,
                   ),
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 30),
+              // Large enough to read from the bed.
               Text('Opening ${widget.appName}',
-                  style: const TextStyle(color: _kText, fontSize: 28, fontWeight: FontWeight.w500)),
-              const SizedBox(height: 14),
+                  style: const TextStyle(color: _kText, fontSize: 44, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 22),
               const Text(
                 "Sign in with your own account to watch. For your privacy, you'll be signed out automatically after checkout.",
                 textAlign: TextAlign.center,
-                style: TextStyle(color: _kMint, fontSize: 17, height: 1.5),
+                style: TextStyle(color: _kMint, fontSize: 28, height: 1.45),
               ),
             ]),
           ),
