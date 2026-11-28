@@ -60,6 +60,33 @@ public final class AmadiSelfAdb {
         }
     }
 
+    /**
+     * Copies a file from the launcher's own storage to the TV (e.g. /data/local/tmp) over the
+     * TV's own ADB, like "adb push". The shell can't always read the launcher's storage
+     * (Onwa / CVTE TVs), so this avoids "cp" there. Returns null on success, else the error.
+     */
+    public static String push(Context c, java.io.File src, String remotePath) {
+        synchronized (LOCK) {
+            Dadb dadb = null;
+            try {
+                dadb = Dadb.Companion.create("127.0.0.1", 5555, keys(c.getApplicationContext()));
+                dadb.push(src, remotePath, 0644, src.lastModified());
+                lastOk = true;
+                lastError = "";
+                return null;
+            } catch (Throwable t) {
+                lastOk = false;
+                lastError = String.valueOf(t.getMessage());
+                Log.w(TAG, "push failed: " + src, t);
+                return lastError;
+            } finally {
+                if (dadb != null) {
+                    try { dadb.close(); } catch (Throwable ignored) {}
+                }
+            }
+        }
+    }
+
     public static void shellAsync(Context c, String command) {
         final Context app = c.getApplicationContext();
         new Thread(() -> shell(app, command)).start();

@@ -307,10 +307,16 @@ public final class AmadiBridge {
         int i = 0;
         for (String p : paths) {
             java.io.File f = new java.io.File(p);
-            // The system installer may not read the launcher's own storage (SELinux), so the
-            // shell copies each file to /data/local/tmp first, like a normal adb install.
+            // The system installer may not read the launcher's own storage (SELinux), and on some
+            // TVs (Onwa) the shell can't either, so each file is pushed to /data/local/tmp over
+            // ADB first, exactly like a normal "adb install".
             String tmp = "/data/local/tmp/amadi_" + i + ".apk";
-            String w = AmadiSelfAdb.shell(c, "cp '" + p + "' " + tmp + " && pm install-write -S " + f.length()
+            String pe = AmadiSelfAdb.push(c, f, tmp);
+            if (pe != null) {
+                AmadiSelfAdb.shell(c, "rm -f " + tmp + "; pm install-abandon " + session);
+                return "copy failed: " + pe;
+            }
+            String w = AmadiSelfAdb.shell(c, "pm install-write -S " + f.length()
                     + " " + session + " " + (i++) + "_" + f.getName() + " " + tmp + "; rm -f " + tmp);
             if (w == null || !w.contains("Success")) {
                 AmadiSelfAdb.shell(c, "pm install-abandon " + session);
