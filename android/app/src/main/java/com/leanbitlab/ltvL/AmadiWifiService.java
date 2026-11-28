@@ -19,14 +19,6 @@ import android.os.IBinder;
 public class AmadiWifiService extends Service {
     private WifiManager.WifiLock lock;
     private android.content.BroadcastReceiver screenOn;
-    private android.content.BroadcastReceiver screenOff;
-    private final android.os.Handler updateHandler = new android.os.Handler(android.os.Looper.getMainLooper());
-    private final Runnable hourlyUpdate = new Runnable() {
-        @Override public void run() {
-            AmadiUpdater.checkAsync(AmadiWifiService.this, false);
-            updateHandler.postDelayed(this, 60 * 60 * 1000L);
-        }
-    };
 
     /**
      * Sets the TV volume to the "volume at power-on" setting (default 5), so a guest
@@ -79,15 +71,15 @@ public class AmadiWifiService extends Service {
         }
         // The TV's "power button" usually just turns the screen off and on: reset volume then too.
         screenOn = new android.content.BroadcastReceiver() {
-            @Override public void onReceive(Context c, Intent i) { applyStartVolume(c); }
+            @Override public void onReceive(Context c, Intent i) {
+                applyStartVolume(c);
+                AmadiUpdater.checkAsync(c, true); // power on: update straight away if there's a new build
+            }
         };
         registerReceiver(screenOn, new android.content.IntentFilter(Intent.ACTION_SCREEN_ON));
-        // Launcher updates: check every hour; a ready update installs once the screen is off.
-        screenOff = new android.content.BroadcastReceiver() {
-            @Override public void onReceive(Context c, Intent i) { AmadiUpdater.checkAsync(c, false); }
-        };
-        registerReceiver(screenOff, new android.content.IntentFilter(Intent.ACTION_SCREEN_OFF));
-        updateHandler.postDelayed(hourlyUpdate, 2 * 60 * 1000L); // first check 2 min after start
+        // Started at boot: check for a launcher update (after a moment for Wi-Fi to connect).
+        new android.os.Handler(android.os.Looper.getMainLooper())
+                .postDelayed(() -> AmadiUpdater.checkAsync(AmadiWifiService.this, true), 45 * 1000L);
     }
 
     @Override
@@ -98,8 +90,6 @@ public class AmadiWifiService extends Service {
     @Override
     public void onDestroy() {
         if (screenOn != null) try { unregisterReceiver(screenOn); } catch (Throwable ignored) {}
-        if (screenOff != null) try { unregisterReceiver(screenOff); } catch (Throwable ignored) {}
-        updateHandler.removeCallbacks(hourlyUpdate);
         if (lock != null && lock.isHeld()) lock.release();
         super.onDestroy();
     }

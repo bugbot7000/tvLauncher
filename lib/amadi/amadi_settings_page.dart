@@ -168,7 +168,7 @@ class _AmadiSettingsPageState extends State<AmadiSettingsPage> with WidgetsBindi
     final latest = _update['latest'] ?? 0;
     final result = '${_update['result'] ?? ''}';
     final head = 'This TV: build $installed${latest is int && latest > 0 ? '  ·  latest released: $latest' : ''}';
-    return result.isEmpty ? '$head\nUpdates install automatically when the TV is off' : '$head\n$result';
+    return result.isEmpty ? '$head\nNew builds install automatically when the TV is turned on' : '$head\n$result';
   }
 
   Future<void> _loadNetwork() async {

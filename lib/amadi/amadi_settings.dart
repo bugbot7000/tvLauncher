@@ -18,9 +18,9 @@ class DockSlot {
 
 const List<DockSlot> kDockSlots = [
   DockSlot('youtube', 'YouTube', 'com.google.android.youtube.tv', ['youtube']),
-  DockSlot('appletv', 'Apple TV', 'com.apple.atve.androidtv.appletv', ['apple tv']),
   DockSlot('prime', 'Prime Video', 'com.amazon.amazonvideo.livingroom', ['prime video', 'primevideo', 'amazon video']),
   DockSlot('hotstar', 'JioHotstar', 'in.startv.hotstar', ['hotstar']),
+  DockSlot('appletv', 'Apple TV', 'com.apple.atve.androidtv.appletv', ['apple tv']),
 ];
 
 /// Google Drive file ID of amadi-tv-apps.json, the list of apps the TV installs.

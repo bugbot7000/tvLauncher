@@ -3,15 +3,14 @@
  * Automatic launcher updates. The TV reads amadi-release.json from the repo's
  * amadi branch; when it names a newer build than the one installed, the TV
  * downloads that APK from the GitHub release, checks its SHA-256, and installs
- * it through its own ADB connection. Only builds tested and marked released in
- * that file are installed. To avoid interrupting a guest, the install happens
- * when the screen is off or between 3 and 5 AM (or right away from settings).
+ * it through its own ADB connection, straight away. Only builds tested and
+ * marked released in that file are installed. Checked whenever the TV powers
+ * on (boot or screen on), and from hotel settings.
  */
 package com.omeda.arc;
 
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.os.PowerManager;
 
 import org.json.JSONObject;
 
@@ -22,7 +21,6 @@ import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.security.MessageDigest;
-import java.util.Calendar;
 
 public final class AmadiUpdater {
     private static final String RELEASE_URL =
@@ -76,45 +74,56 @@ public final class AmadiUpdater {
     }
 
     private static String run(Context c, boolean installNow) throws Exception {
+        File dir = c.getExternalFilesDir(null);
+        if (dir == null) dir = c.getFilesDir();
+        // Never keep update files around: the TVs have little free space.
+        // (These are only downloaded copies; the installed launcher is never touched here.)
+        File[] old = dir.listFiles((d, n) -> n.startsWith("amadi-update-"));
+        if (old != null) for (File f : old) f.delete();
+
         JSONObject rel = new JSONObject(readText(RELEASE_URL + "?t=" + System.currentTimeMillis()));
         int latest = rel.getInt("build");
         String url = rel.getString("url");
         String sha = rel.optString("sha256", "").toLowerCase();
-        prefs(c).edit().putInt("latest", latest).commit();
+        SharedPreferences p = prefs(c);
+        p.edit().putInt("latest", latest).commit();
         int installed = installedBuild(c);
         if (latest <= installed) return "Up to date (build " + installed + ")";
 
-        File dir = c.getExternalFilesDir(null);
-        if (dir == null) dir = c.getFilesDir();
+        // Power-on can fire twice (boot + screen on): don't start the same install twice.
+        if (p.getInt("installing", 0) == latest
+                && System.currentTimeMillis() - p.getLong("installingAt", 0) < 10 * 60 * 1000L) {
+            return "Installing build " + latest;
+        }
+        // Room for the download plus the shell's temporary copy.
+        long need = 2L * 40 * 1024 * 1024;
+        if (dir.getUsableSpace() < need || new File("/data").getUsableSpace() < need) {
+            return "Not enough free space for build " + latest;
+        }
+
         File apk = new File(dir, "amadi-update-" + latest + ".apk");
-        if (!apk.exists() || (!sha.isEmpty() && !sha.equals(sha256(apk)))) {
-            // Clear older downloads first: the TVs have little free space.
-            File[] old = dir.listFiles((d, n) -> n.startsWith("amadi-update-"));
-            if (old != null) for (File f : old) f.delete();
+        try {
             download(url, apk);
-            if (!sha.isEmpty() && !sha.equals(sha256(apk))) {
-                apk.delete();
-                return "Build " + latest + " download was damaged; will retry";
+            if (sha.isEmpty() || !sha.equals(sha256(apk))) {
+                return "Build " + latest + " download didn't match its checksum; will retry at next power-on";
             }
+            // "pm install -r" replaces the launcher in one step: if anything goes wrong the TV
+            // keeps the launcher it has. The launcher is never uninstalled first.
+            // Installing stops this app, so the install runs on its own in the TV's shell, from a
+            // temporary copy that the shell deletes when it's done.
+            String tmp = "/data/local/tmp/amadi_update.apk";
+            String out = AmadiSelfAdb.shell(c, "cp '" + apk.getAbsolutePath() + "' " + tmp
+                    + " && (nohup sh -c 'pm install -r " + tmp + "; rm -f " + tmp + "' >/dev/null 2>&1 &) && echo started");
+            if (out == null || !out.contains("started")) {
+                AmadiSelfAdb.shell(c, "rm -f " + tmp);
+                return "Install of build " + latest + " couldn't start: " + (out == null ? AmadiSelfAdb.lastError() : out.trim());
+            }
+            p.edit().putInt("installing", latest).putLong("installingAt", System.currentTimeMillis()).commit();
+            return "Installing build " + latest;
+        } finally {
+            apk.delete(); // the shell has its own copy by now (or there's nothing to install)
+            new File(apk.getPath() + ".part").delete();
         }
-        if (!installNow && !quietTime(c)) return "Build " + latest + " ready; installs when the TV is off";
-
-        // Installing replaces this app and stops it, so the install runs on its own in the TV's shell.
-        String tmp = "/data/local/tmp/amadi_update.apk";
-        String out = AmadiSelfAdb.shell(c, "cp '" + apk.getAbsolutePath() + "' " + tmp
-                + " && (nohup sh -c 'pm install -r " + tmp + "; rm -f " + tmp + "' >/dev/null 2>&1 &) && echo started");
-        if (out == null || !out.contains("started")) {
-            return "Install of build " + latest + " couldn't start: " + (out == null ? AmadiSelfAdb.lastError() : out.trim());
-        }
-        return "Installing build " + latest;
-    }
-
-    /** Screen off, or between 3 and 5 AM. */
-    private static boolean quietTime(Context c) {
-        PowerManager pm = (PowerManager) c.getSystemService(Context.POWER_SERVICE);
-        if (pm != null && !pm.isInteractive()) return true;
-        int h = Calendar.getInstance().get(Calendar.HOUR_OF_DAY);
-        return h >= 3 && h < 5;
     }
 
     private static HttpURLConnection open(String url) throws Exception {
